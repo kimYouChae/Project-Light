@@ -4,6 +4,13 @@ using UnityEngine;
 /// <summary>몸체 피격과 수명·영역 밖 회수를 처리하는 풀링 비교용 직선 탄.</summary>
 public sealed class TestBullet : MonoBehaviour
 {
+    [Header("퍼펙트 처리 표시")]
+    [SerializeField] private SpriteRenderer spriteRenderer;
+    // ##TEMP 퍼펙트 처리된 탄의 구분 색상. 인스펙터에서 조정한다.
+    [SerializeField] private Color perfectColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+
+    private Color originalColor;
+    private bool originalColorCached;
     private Vector2 velocity;
     private float remainingLifetime;
     private float radius;
@@ -31,6 +38,8 @@ public sealed class TestBullet : MonoBehaviour
             return false;
 
         perfectProcessed = true;
+        if (spriteRenderer != null)
+            spriteRenderer.color = perfectColor;
         return true;
     }
 
@@ -43,6 +52,18 @@ public sealed class TestBullet : MonoBehaviour
             registry.Unregister(this);
         registry = bulletRegistry;
         perfectProcessed = false;
+        // 비활성 프리팹은 Awake 전에도 준비되므로 여기서 최초 색상을 확보한다.
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            if (!originalColorCached)
+            {
+                originalColor = spriteRenderer.color;
+                originalColorCached = true;
+            }
+            spriteRenderer.color = originalColor;
+        }
         transform.position = position;
         transform.rotation = Quaternion.identity;
         transform.localScale = Vector3.one * (bulletRadius * 2f);
@@ -78,11 +99,8 @@ public sealed class TestBullet : MonoBehaviour
         transform.position += (Vector3)(velocity * Time.deltaTime);
         remainingLifetime -= Time.deltaTime;
         Vector3 position = transform.position;
-        if (TryHitPlayer(previousPosition, position))
-        {
-            Expire();
-            return;
-        }
+        // 몸체 접촉은 피해만 검사한다. 퍼펙트·일반 피격으로 탄을 회수하지 않는다.
+        TryHitPlayer(previousPosition, position);
         bool outside = position.x < playfieldBounds.min.x - radius || position.x > playfieldBounds.max.x + radius
             || position.y < playfieldBounds.min.y - radius || position.y > playfieldBounds.max.y + radius;
         if (remainingLifetime <= 0f || outside)
@@ -91,7 +109,8 @@ public sealed class TestBullet : MonoBehaviour
 
     private bool TryHitPlayer(Vector2 previousPosition, Vector2 currentPosition)
     {
-        if (hitTarget == null || hitTarget.IsDead)
+        // 퍼펙트 처리된 탄은 이번 발사가 끝날 때까지 몸체 피해 판정에서 제외한다.
+        if (perfectProcessed || hitTarget == null || hitTarget.IsDead)
             return false;
 
         // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.

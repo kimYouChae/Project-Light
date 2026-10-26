@@ -20,7 +20,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
     [Header("테스트 탄 설정")]
     // ##TEMP 풀 비교용 초기값. 인스펙터에서 조정한다.
     [SerializeField, Min(1)] private int initialPoolCount = 64;
-    [SerializeField, Min(0.01f)] private float fireInterval = 0.2f;
+    [SerializeField, Min(0.01f)] private float fireInterval = 2f;
     [SerializeField, Min(0f)] private float bulletSpeed = 3f;
     [SerializeField, Min(0.01f)] private float bulletLifetime = 8f;
     [SerializeField, Min(0.01f)] private float bulletRadius = 0.12f;

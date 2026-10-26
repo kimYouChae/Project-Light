@@ -156,7 +156,7 @@ MonoBehaviour:
   bulletParent: {fileID: 955776541}
   bulletRegistry: {fileID: 856490552}
   initialPoolCount: 64
-  fireInterval: 0.2
+  fireInterval: 2
   bulletSpeed: 3
   bulletLifetime: 8
   bulletRadius: 0.12
