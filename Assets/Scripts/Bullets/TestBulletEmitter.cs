@@ -31,6 +31,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
     private Action<TestBullet> releaseBullet;
     private ComponentPool<TestBullet> spawnPool;
     private float elapsed;
+    private PlayerHealth targetHealth;
 
     private void Start()
     {
@@ -45,6 +46,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
             factory = new TestBulletFactory(bulletPrefab, bulletParent);
             prepareBullet = PrepareBullet;
             releaseBullet = ReleaseBullet;
+            targetHealth = target.GetComponent<PlayerHealth>();
             if (usePooling)
                 EnsurePool();
         }
@@ -96,7 +98,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
         if (direction.sqrMagnitude <= Mathf.Epsilon)
             direction = Vector2.down;
         bullet.Prepare(transform.position, direction, bulletSpeed, bulletLifetime,
-            bulletRadius, playfield.bounds, spawnPool, releaseBullet);
+            bulletRadius, playfield.bounds, spawnPool, releaseBullet, targetHealth);
         activeBullets.Add(bullet);
     }
 

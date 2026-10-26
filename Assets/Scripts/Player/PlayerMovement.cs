@@ -10,6 +10,9 @@ public sealed class PlayerMovement : MonoBehaviour
     [SerializeField, Min(0f)] private float bodyRadius = 0.25f;
     [SerializeField] private SpriteRenderer playfield;
 
+    /// <summary>이동 경계와 몸체 피격 판정에 사용하는 월드 반경.</summary>
+    public float BodyRadius => bodyRadius;
+
     private void Update()
     {
         Keyboard keyboard = Keyboard.current;

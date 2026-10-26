@@ -23,11 +23,20 @@ public sealed class PlayerLight : MonoBehaviour
     [SerializeField, Min(0f)] private float haloIntensity = 1.5f;
     [SerializeField, Range(0f, 1f)] private float innerRadiusRatio = 0.4f;
 
+    private float healthRatio = 1f;
+
     /// <summary>퍼펙트 회피 판정에 사용하는 고정 코어의 월드 반경.</summary>
     public float CoreRadius => coreRadius;
 
     /// <summary>시야와 체력에 사용하는 헤일로의 월드 반경.</summary>
-    public float HaloRadius => haloRadius;
+    public float HaloRadius => haloRadius * healthRatio;
+
+    /// <summary>코어는 유지하고 최대 헤일로 반경에 남은 체력 비율을 적용한다.</summary>
+    public void SetHealthRatio(float ratio)
+    {
+        healthRatio = Mathf.Clamp01(ratio);
+        UpdateHalo();
+    }
 
     /// <summary>원형 탄이 코어 경계에 걸쳐 있는지 월드 좌표로 판정한다.</summary>
     public bool IsOnCoreBoundary(Vector2 bulletPosition, float bulletRadius)
@@ -39,7 +48,8 @@ public sealed class PlayerLight : MonoBehaviour
     /// <summary>지정한 월드 좌표가 헤일로 안쪽인지 반환한다.</summary>
     public bool IsInsideHalo(Vector2 worldPosition)
     {
-        return haloRadius > 0f && (worldPosition - (Vector2)transform.position).sqrMagnitude <= haloRadius * haloRadius;
+        float currentRadius = HaloRadius;
+        return currentRadius > 0f && (worldPosition - (Vector2)transform.position).sqrMagnitude <= currentRadius * currentRadius;
     }
 
     private void LateUpdate()
@@ -61,15 +71,21 @@ public sealed class PlayerLight : MonoBehaviour
             }
         }
 
+        UpdateHalo();
+    }
+
+    private void UpdateHalo()
+    {
         if (haloLight != null)
         {
+            float currentRadius = HaloRadius;
             haloLight.lightType = Light2D.LightType.Point;
             haloLight.transform.position = transform.position;
-            haloLight.pointLightOuterRadius = haloRadius;
-            haloLight.pointLightInnerRadius = haloRadius * innerRadiusRatio;
+            haloLight.pointLightOuterRadius = currentRadius;
+            haloLight.pointLightInnerRadius = currentRadius * innerRadiusRatio;
             haloLight.color = haloColor;
             haloLight.intensity = haloIntensity;
-            haloLight.enabled = haloRadius > 0f;
+            haloLight.enabled = currentRadius > 0f;
         }
     }
 

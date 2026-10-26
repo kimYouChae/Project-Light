@@ -1381,6 +1381,7 @@ GameObject:
   - component: {fileID: 2047060542}
   - component: {fileID: 2047060544}
   - component: {fileID: 2047060543}
+  - component: {fileID: 2047060545}
   m_Layer: 0
   m_Name: Player_TEMP
   m_TagString: Untagged
@@ -1443,6 +1444,23 @@ MonoBehaviour:
   moveSpeed: 5
   bodyRadius: 0.25
   playfield: {fileID: 1864379177}
+--- !u!114 &2047060545
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2047060540}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75fec12d11259254a82971cd76e3131c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
+  maxHealth: 10
+  damagePerHit: 1
+  hitInvulnerabilityDuration: 1
+  currentHealth: 0
+  isDead: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
