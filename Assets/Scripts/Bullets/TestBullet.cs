@@ -12,15 +12,37 @@ public sealed class TestBullet : MonoBehaviour
     private bool prepared;
     private PlayerHealth hitTarget;
     private Vector2 previousTargetPosition;
+    private BulletRegistry registry;
+    private bool perfectProcessed;
 
     /// <summary>발사 당시의 풀. null이면 Instantiate/Destroy 모드다.</summary>
     public ComponentPool<TestBullet> SourcePool { get; private set; }
 
+    /// <summary>탄의 월드 판정 반경.</summary>
+    public float Radius => radius;
+
+    /// <summary>이번 발사에서 이미 퍼펙트 처리됐는지 반환한다.</summary>
+    public bool PerfectProcessed => perfectProcessed;
+
+    /// <summary>활성 탄을 이번 발사에서 한 번만 퍼펙트 처리한다.</summary>
+    public bool TryMarkPerfect()
+    {
+        if (!prepared || !isActiveAndEnabled || perfectProcessed)
+            return false;
+
+        perfectProcessed = true;
+        return true;
+    }
+
     /// <summary>비활성 상태에서 월드 위치·방향·속도·수명·크기와 반환 방식을 설정한다.</summary>
     public void Prepare(Vector3 position, Vector2 direction, float speed, float lifetime,
         float bulletRadius, Bounds bounds, ComponentPool<TestBullet> sourcePool, Action<TestBullet> onRelease,
-        PlayerHealth target = null)
+        PlayerHealth target = null, BulletRegistry bulletRegistry = null)
     {
+        if (registry != null)
+            registry.Unregister(this);
+        registry = bulletRegistry;
+        perfectProcessed = false;
         transform.position = position;
         transform.rotation = Quaternion.identity;
         transform.localScale = Vector3.one * (bulletRadius * 2f);
@@ -33,6 +55,18 @@ public sealed class TestBullet : MonoBehaviour
         hitTarget = target;
         previousTargetPosition = target != null ? (Vector2)target.transform.position : Vector2.zero;
         prepared = true;
+    }
+
+    private void OnEnable()
+    {
+        if (prepared && registry != null)
+            registry.Register(this);
+    }
+
+    private void OnDisable()
+    {
+        if (registry != null)
+            registry.Unregister(this);
     }
 
     private void Update()
@@ -80,6 +114,9 @@ public sealed class TestBullet : MonoBehaviour
             return;
 
         prepared = false;
+        // Destroy는 프레임 끝에 실행되므로 회수 시점에 목록에서 먼저 제외한다.
+        if (registry != null)
+            registry.Unregister(this);
         Action<TestBullet> callback = release;
         release = null;
         hitTarget = null;

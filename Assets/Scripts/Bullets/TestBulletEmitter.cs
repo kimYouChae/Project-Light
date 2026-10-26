@@ -15,6 +15,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
     [SerializeField] private Transform target;
     [SerializeField] private SpriteRenderer playfield;
     [SerializeField] private Transform bulletParent;
+    [SerializeField] private BulletRegistry bulletRegistry;
 
     [Header("테스트 탄 설정")]
     // ##TEMP 풀 비교용 초기값. 인스펙터에서 조정한다.
@@ -35,9 +36,9 @@ public sealed class TestBulletEmitter : MonoBehaviour
 
     private void Start()
     {
-        if (bulletPrefab == null || target == null || playfield == null || bulletParent == null)
+        if (bulletPrefab == null || target == null || playfield == null || bulletParent == null || bulletRegistry == null)
         {
-            Debug.LogError("테스트 발사기의 프리팹·타겟·필드·탄 부모 참조를 확인해주세요.", this);
+            Debug.LogError("테스트 발사기의 프리팹·타겟·필드·탄 부모·탄 관리자 참조를 확인해주세요.", this);
             enabled = false;
             return;
         }
@@ -98,7 +99,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
         if (direction.sqrMagnitude <= Mathf.Epsilon)
             direction = Vector2.down;
         bullet.Prepare(transform.position, direction, bulletSpeed, bulletLifetime,
-            bulletRadius, playfield.bounds, spawnPool, releaseBullet, targetHealth);
+            bulletRadius, playfield.bounds, spawnPool, releaseBullet, targetHealth, bulletRegistry);
         activeBullets.Add(bullet);
     }
 

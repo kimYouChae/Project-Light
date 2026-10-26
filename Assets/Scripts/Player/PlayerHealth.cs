@@ -56,6 +56,13 @@ public sealed class PlayerHealth : MonoBehaviour
         return true;
     }
 
+    /// <summary>남은 무적을 단축하지 않고 지정 시간만큼 무적을 부여한다.</summary>
+    public void GrantInvulnerability(float duration)
+    {
+        if (!isDead)
+            invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + Mathf.Max(0f, duration));
+    }
+
     private void OnValidate()
     {
         maxHealth = Mathf.Max(1, maxHealth);
