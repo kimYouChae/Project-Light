@@ -5,6 +5,9 @@ using UnityEngine;
 public sealed class PlayerBullet : MonoBehaviour
 {
     [SerializeField] private Transform visual;
+    [SerializeField] private UnityEngine.Rendering.Universal.Light2D attackLight;
+    private float baseLightIntensity;
+    private bool lightIntensityCached;
     private Vector3 startPosition;
     private Vector3 endPosition;
     private Vector3 arcDirection;
@@ -20,7 +23,8 @@ public sealed class PlayerBullet : MonoBehaviour
 
     /// <summary>대여 탄의 위치, 궤적, 피해와 반환 상태를 초기화한다.</summary>
     public void Prepare(Vector3 start, BossHealth target, float speed, float height,
-        float radius, int hitDamage, Bounds fieldBounds, ComponentPool<PlayerBullet> sourcePool,
+        float radius, int hitDamage, float lightMultiplier,
+        Bounds fieldBounds, ComponentPool<PlayerBullet> sourcePool,
         Action<PlayerBullet> onReturned)
     {
         startPosition = start;
@@ -44,7 +48,18 @@ public sealed class PlayerBullet : MonoBehaviour
         transform.position = startPosition;
         if (visual != null)
             visual.localScale = Vector3.one * (radius * 2f);
+        CacheLightIntensity();
+        if (attackLight != null)
+            attackLight.intensity = baseLightIntensity * lightMultiplier;
         prepared = true;
+    }
+
+    private void CacheLightIntensity()
+    {
+        if (lightIntensityCached || attackLight == null)
+            return;
+        baseLightIntensity = attackLight.intensity;
+        lightIntensityCached = true;
     }
 
     private float GetOverflow(Vector3 bend, Bounds bounds)

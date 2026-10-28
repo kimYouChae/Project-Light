@@ -38,11 +38,13 @@ public sealed class PlayerLight : MonoBehaviour
         UpdateHalo();
     }
 
-    /// <summary>원형 탄이 코어 경계에 걸쳐 있는지 월드 좌표로 판정한다.</summary>
-    public bool IsOnCoreBoundary(Vector2 bulletPosition, float bulletRadius)
+    /// <summary>원형 탄이 추가 허용 폭을 포함한 코어 경계에 걸치는지 검사한다.</summary>
+    public bool IsOnCoreBoundary(
+        Vector2 bulletPosition, float bulletRadius, float tolerance = 0f)
     {
         float distance = Vector2.Distance(transform.position, bulletPosition);
-        return Mathf.Abs(distance - coreRadius) <= Mathf.Max(0f, bulletRadius);
+        float allowedWidth = Mathf.Max(0f, bulletRadius) + Mathf.Max(0f, tolerance);
+        return Mathf.Abs(distance - coreRadius) <= allowedWidth;
     }
 
     /// <summary>지정한 월드 좌표가 헤일로 안쪽인지 반환한다.</summary>
