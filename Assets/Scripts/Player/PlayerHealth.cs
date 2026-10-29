@@ -40,7 +40,13 @@ public sealed class PlayerHealth : MonoBehaviour
     /// <summary>실제 피격을 적용하면 true, 무적·사망·비활성 상태면 false를 반환한다.</summary>
     public bool TryTakeHit()
     {
-        if (!isActiveAndEnabled || isDead || Time.time < invulnerableUntil)
+        return TryTakeHit(damagePerHit);
+    }
+
+    /// <summary>지정한 피해를 적용하며 기존 무적·사망 규칙을 유지한다.</summary>
+    public bool TryTakeHit(int damage)
+    {
+        if (damage <= 0 || !isActiveAndEnabled || isDead || Time.time < invulnerableUntil)
             return false;
 
         if (currentHealth == 0)
@@ -50,7 +56,7 @@ public sealed class PlayerHealth : MonoBehaviour
             return true;
         }
 
-        currentHealth = Mathf.Max(0, currentHealth - damagePerHit);
+        currentHealth = Mathf.Max(0, currentHealth - damage);
         invulnerableUntil = Time.time + hitInvulnerabilityDuration;
         playerLight.SetHealthRatio((float)currentHealth / maxHealth);
         return true;

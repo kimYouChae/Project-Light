@@ -234,7 +234,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 152663199}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8490e2c6a693ebc49b92d91ee306b2ce, type: 3}
   m_Name: 
@@ -1832,6 +1832,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2047060542}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1498051991
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1498051993}
+  - component: {fileID: 1498051992}
+  m_Layer: 0
+  m_Name: BossBulletPattern_TEMP
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1498051992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1498051991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 953b4ec59c230c34a83878a0ebb06505, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossBulletPattern
+  bulletPrefab: {fileID: 3014184059525224061, guid: 4eca56270638fb44a86153dc241fbf42, type: 3}
+  playerTransform: {fileID: 2047060542}
+  playerHealth: {fileID: 2047060545}
+  playfield: {fileID: 1864379177}
+  bulletParent: {fileID: 955776541}
+  bulletRegistry: {fileID: 856490552}
+  waveDuration: 5
+  straightDuration: 10
+  straightFireInterval: 2
+  waveBurstCount: 6
+  waveBulletInterval: 0.15
+  waveBurstInterval: 1.5
+  bulletSpeed: 2
+  waveAmplitude: 0.8
+  wavePeriod: 2
+  bulletRadius: 0.12
+  initialPoolCount: 64
+--- !u!4 &1498051993
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1498051991}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1631124172
 GameObject:
   m_ObjectHideFlags: 0
@@ -2601,7 +2662,10 @@ MonoBehaviour:
   initialPoolCount: 16
   bulletSpeed: 6
   bulletRadius: 0.06
-  arcHeight: 2
+  arcHeightOptions:
+  - 1
+  - 2
+  - 1.5
   damage: 1
   enhancedDamageMultiplier: 2
   enhancedSizeMultiplier: 2
@@ -2671,3 +2735,4 @@ SceneRoots:
   - {fileID: 1361889215}
   - {fileID: 544653530}
   - {fileID: 1973853898}
+  - {fileID: 1498051993}

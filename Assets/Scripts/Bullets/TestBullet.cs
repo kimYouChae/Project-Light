@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
 
-/// <summary>몸체 피격과 수명·영역 밖 회수를 처리하는 풀링 비교용 직선 탄.</summary>
+/// <summary>몸체 피격·퍼펙트 상태와 수명·영역 밖 회수를 처리하는 적탄.</summary>
 public sealed class TestBullet : MonoBehaviour
 {
     [Header("퍼펙트 처리 표시")]
     [SerializeField] private SpriteRenderer spriteRenderer;
+    [SerializeField] private EnemyBulletMovement movement;
     // ##TEMP 퍼펙트 처리된 탄의 구분 색상. 인스펙터에서 조정한다.
     [SerializeField] private Color perfectColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
@@ -21,6 +22,9 @@ public sealed class TestBullet : MonoBehaviour
     private Vector2 previousTargetPosition;
     private BulletRegistry registry;
     private bool perfectProcessed;
+    private int damageOverride;
+    private bool hitOnce;
+    private bool hitApplied;
 
     /// <summary>발사 당시의 풀. null이면 Instantiate/Destroy 모드다.</summary>
     public ComponentPool<TestBullet> SourcePool { get; private set; }
@@ -30,6 +34,9 @@ public sealed class TestBullet : MonoBehaviour
 
     /// <summary>이번 발사에서 이미 퍼펙트 처리됐는지 반환한다.</summary>
     public bool PerfectProcessed => perfectProcessed;
+
+    /// <summary>패턴 발사기가 대여 준비 시 설정하는 이동 컴포넌트.</summary>
+    public EnemyBulletMovement Movement => movement;
 
     /// <summary>활성 탄을 이번 발사에서 한 번만 퍼펙트 처리한다.</summary>
     public bool TryMarkPerfect()
@@ -46,12 +53,16 @@ public sealed class TestBullet : MonoBehaviour
     /// <summary>비활성 상태에서 월드 위치·방향·속도·수명·크기와 반환 방식을 설정한다.</summary>
     public void Prepare(Vector3 position, Vector2 direction, float speed, float lifetime,
         float bulletRadius, Bounds bounds, ComponentPool<TestBullet> sourcePool, Action<TestBullet> onRelease,
-        PlayerHealth target = null, BulletRegistry bulletRegistry = null)
+        PlayerHealth target = null, BulletRegistry bulletRegistry = null,
+        int damageOverride = 0, bool hitOnce = false)
     {
         if (registry != null)
             registry.Unregister(this);
         registry = bulletRegistry;
         perfectProcessed = false;
+        this.damageOverride = Mathf.Max(0, damageOverride);
+        this.hitOnce = hitOnce;
+        hitApplied = false;
         // 비활성 프리팹은 Awake 전에도 준비되므로 여기서 최초 색상을 확보한다.
         if (spriteRenderer == null)
             spriteRenderer = GetComponent<SpriteRenderer>();
@@ -75,6 +86,8 @@ public sealed class TestBullet : MonoBehaviour
         release = onRelease;
         hitTarget = target;
         previousTargetPosition = target != null ? (Vector2)target.transform.position : Vector2.zero;
+        if (movement != null)
+            movement.PrepareStraight(position, direction, speed);
         prepared = true;
     }
 
@@ -96,7 +109,10 @@ public sealed class TestBullet : MonoBehaviour
             return;
 
         Vector2 previousPosition = transform.position;
-        transform.position += (Vector3)(velocity * Time.deltaTime);
+        if (movement != null)
+            transform.position = movement.Move(Time.deltaTime);
+        else
+            transform.position += (Vector3)(velocity * Time.deltaTime);
         remainingLifetime -= Time.deltaTime;
         Vector3 position = transform.position;
         // 몸체 접촉은 피해만 검사한다. 퍼펙트·일반 피격으로 탄을 회수하지 않는다.
@@ -110,7 +126,7 @@ public sealed class TestBullet : MonoBehaviour
     private bool TryHitPlayer(Vector2 previousPosition, Vector2 currentPosition)
     {
         // 퍼펙트 처리된 탄은 이번 발사가 끝날 때까지 몸체 피해 판정에서 제외한다.
-        if (perfectProcessed || hitTarget == null || hitTarget.IsDead)
+        if (perfectProcessed || (hitOnce && hitApplied) || hitTarget == null || hitTarget.IsDead)
             return false;
 
         // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.
@@ -123,7 +139,13 @@ public sealed class TestBullet : MonoBehaviour
         float progress = lengthSquared > 0f ? Mathf.Clamp01(-Vector2.Dot(start, segment) / lengthSquared) : 0f;
         Vector2 closest = start + segment * progress;
         float combinedRadius = radius + hitTarget.BodyRadius;
-        return closest.sqrMagnitude <= combinedRadius * combinedRadius && hitTarget.TryTakeHit();
+        if (closest.sqrMagnitude > combinedRadius * combinedRadius)
+            return false;
+        bool damaged = damageOverride > 0
+            ? hitTarget.TryTakeHit(damageOverride) : hitTarget.TryTakeHit();
+        if (damaged)
+            hitApplied = true;
+        return damaged;
     }
 
     /// <summary>발사할 때 등록한 방식으로 한 번만 회수한다.</summary>

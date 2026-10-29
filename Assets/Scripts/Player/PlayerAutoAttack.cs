@@ -17,7 +17,8 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     [SerializeField, Min(0)] private int initialPoolCount = 16; // ##TEMP 초기 풀 크기
     [SerializeField, Min(0.01f)] private float bulletSpeed = 6f; // ##TEMP 탄 속도
     [SerializeField, Min(0.01f)] private float bulletRadius = 0.12f; // ##TEMP 탄 반경
-    [SerializeField, Min(0f)] private float arcHeight = 1f; // ##TEMP 포물선 높이
+    // ##TEMP 발사마다 동일 확률로 선택할 포물선 높이.
+    [SerializeField] private float[] arcHeightOptions = { 1f, 2f, 1.5f };
     [SerializeField, Min(1)] private int damage = 1; // ##TEMP 기본 공격 피해
     // ##TEMP 강화 공격 테스트용 배율. 인스펙터에서 조정한다.
     [SerializeField, Min(1)] private int enhancedDamageMultiplier = 2;
@@ -88,7 +89,9 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         float shotRadius = enhanced ? bulletRadius * enhancedSizeMultiplier : bulletRadius;
         float lightMultiplier = enhanced ? enhancedLightMultiplier : 1f;
 
-        bullet.Prepare(firePoint.position, targetBoss, bulletSpeed, arcHeight,
+        float selectedHeight = arcHeightOptions[
+            UnityEngine.Random.Range(0, arcHeightOptions.Length)];
+        bullet.Prepare(firePoint.position, targetBoss, bulletSpeed, selectedHeight,
             shotRadius, shotDamage, lightMultiplier,
             playfield.bounds, pool, returnedBullet);
         activeBullets.Add(bullet);
@@ -116,7 +119,10 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         initialPoolCount = Mathf.Max(0, initialPoolCount);
         bulletSpeed = Mathf.Max(0.01f, bulletSpeed);
         bulletRadius = Mathf.Max(0.01f, bulletRadius);
-        arcHeight = Mathf.Max(0f, arcHeight);
+        if (arcHeightOptions == null || arcHeightOptions.Length == 0)
+            arcHeightOptions = new[] { 1f, 2f, 1.5f }; // ##TEMP 초기 후보 복원
+        for (int i = 0; i < arcHeightOptions.Length; i++)
+            arcHeightOptions[i] = Mathf.Max(0f, arcHeightOptions[i]);
         damage = Mathf.Max(1, damage);
         enhancedDamageMultiplier = Mathf.Max(1, enhancedDamageMultiplier);
         enhancedSizeMultiplier = Mathf.Max(1f, enhancedSizeMultiplier);

@@ -36,11 +36,22 @@ public sealed class PlayerBullet : MonoBehaviour
         elapsed = 0f;
         arcHeight = height;
         bulletRadius = radius;
-        // 양쪽 궤적의 경계 이탈량을 비교한다. 같으면 기존 방향을 유지한다.
+        // 양쪽 궤적의 경계 이탈량을 비교한다.
         float originalOverflow = GetOverflow(arcDirection, fieldBounds);
         float oppositeOverflow = GetOverflow(-arcDirection, fieldBounds);
-        if (oppositeOverflow < originalOverflow)
+        bool originalInside = originalOverflow <= 0f;
+        bool oppositeInside = oppositeOverflow <= 0f;
+        if (originalInside && oppositeInside)
+        {
+            // 양쪽 모두 맵 안에 들어오면 발사마다 좌·우를 랜덤 선택한다.
+            if (UnityEngine.Random.value < 0.5f)
+                arcDirection = -arcDirection;
+        }
+        else if (oppositeOverflow < originalOverflow)
+        {
+            // 가장자리에서는 이탈량이 적은 방향을 선택한다.
             arcDirection = -arcDirection;
+        }
         damage = hitDamage;
         targetBoss = target;
         pool = sourcePool;
