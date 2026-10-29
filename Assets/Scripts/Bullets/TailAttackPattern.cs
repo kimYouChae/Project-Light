@@ -204,7 +204,10 @@ public sealed class TailAttackPattern : MonoBehaviour
     private void OnDisable()
     {
         foreach (PendingEruption pending in pendingEruptions)
-            warningPool?.Return(pending.warning);
+        {
+            if (pending.warning != null)
+                warningPool?.Return(pending.warning);
+        }
         pendingEruptions.Clear();
         foreach (TestBullet tail in new List<TestBullet>(activeTails))
             if (tail != null)
