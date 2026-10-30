@@ -25,6 +25,8 @@ public sealed class TestBullet : MonoBehaviour
     private int damageOverride;
     private bool hitOnce;
     private bool hitApplied;
+    private bool ending;
+    private Vector3 absorptionStart;
 
     /// <summary>발사 당시의 풀. null이면 Instantiate/Destroy 모드다.</summary>
     public ComponentPool<TestBullet> SourcePool { get; private set; }
@@ -41,13 +43,35 @@ public sealed class TestBullet : MonoBehaviour
     /// <summary>활성 탄을 이번 발사에서 한 번만 퍼펙트 처리한다.</summary>
     public bool TryMarkPerfect()
     {
-        if (!prepared || !isActiveAndEnabled || perfectProcessed)
+        if (!prepared || ending || !isActiveAndEnabled || perfectProcessed)
             return false;
 
         perfectProcessed = true;
         if (spriteRenderer != null)
             spriteRenderer.color = perfectColor;
         return true;
+    }
+
+    /// <summary>이동·수명·피해·PERFECT 검사를 멈춘다.</summary>
+    public void FreezeForEnding()
+    {
+        if (!prepared || ending)
+            return;
+        ending = true;
+        absorptionStart = transform.position;
+        hitTarget = null;
+        registry?.Unregister(this);
+    }
+
+    /// <summary>멈춘 위치에서 목적지까지 가속하며 이동하고 도착하면 반환한다.</summary>
+    public void AdvanceAbsorption(Vector3 destination, float progress)
+    {
+        if (!prepared || !ending)
+            return;
+        float t = Mathf.Clamp01(progress);
+        transform.position = Vector3.Lerp(absorptionStart, destination, t * t);
+        if (t >= 1f)
+            Expire();
     }
 
     /// <summary>비활성 상태에서 월드 위치·방향·속도·수명·크기와 반환 방식을 설정한다.</summary>
@@ -59,6 +83,7 @@ public sealed class TestBullet : MonoBehaviour
         if (registry != null)
             registry.Unregister(this);
         registry = bulletRegistry;
+        ending = false;
         perfectProcessed = false;
         this.damageOverride = Mathf.Max(0, damageOverride);
         this.hitOnce = hitOnce;
@@ -93,7 +118,7 @@ public sealed class TestBullet : MonoBehaviour
 
     private void OnEnable()
     {
-        if (prepared && registry != null)
+        if (prepared && !ending && registry != null)
             registry.Register(this);
     }
 
@@ -105,7 +130,7 @@ public sealed class TestBullet : MonoBehaviour
 
     private void Update()
     {
-        if (!prepared)
+        if (!prepared || ending)
             return;
 
         Vector2 previousPosition = transform.position;
@@ -126,7 +151,7 @@ public sealed class TestBullet : MonoBehaviour
     private bool TryHitPlayer(Vector2 previousPosition, Vector2 currentPosition)
     {
         // 퍼펙트 처리된 탄은 이번 발사가 끝날 때까지 몸체 피해 판정에서 제외한다.
-        if (perfectProcessed || (hitOnce && hitApplied) || hitTarget == null || hitTarget.IsDead)
+        if (ending || perfectProcessed || (hitOnce && hitApplied) || hitTarget == null || hitTarget.IsDead)
             return false;
 
         // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.

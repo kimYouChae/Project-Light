@@ -12,6 +12,12 @@ public sealed class TailLaneHazard : MonoBehaviour
     private float holdDuration;
     private float travelDuration;
     private int damage;
+    private bool retreating;
+    private Vector3 retreatStart;
+    private float retreatElapsed;
+
+    /// <summary>등장한 쪽으로 회수가 끝났는지 반환한다.</summary>
+    public bool IsRetreatComplete => retreating && retreatElapsed >= travelDuration;
 
     /// <summary>등장 방향과 영역·피해를 설정하고 이전 대여 상태를 초기화한다.</summary>
     public void Prepare(Bounds fieldBounds, Bounds dangerBounds, bool fromTop,
@@ -25,6 +31,8 @@ public sealed class TailLaneHazard : MonoBehaviour
         travelDuration = Mathf.Max(0.01f, travelTime);
         damage = hitDamage;
         playerHealth = target;
+        retreating = false;
+        retreatElapsed = 0f;
         transform.localScale = Vector3.one;
         UpdatePose(0f);
     }
@@ -32,6 +40,8 @@ public sealed class TailLaneHazard : MonoBehaviour
     /// <summary>등장 시작 후 경과 시간으로 연출과 현재 접촉 피해를 갱신한다.</summary>
     public void Advance(float elapsed)
     {
+        if (retreating)
+            return;
         Bounds hitBounds = UpdatePose(elapsed);
         if (hitBounds.size.x <= 0f || hitBounds.size.y <= 0f || playerHealth == null)
             return;
@@ -44,6 +54,26 @@ public sealed class TailLaneHazard : MonoBehaviour
             playerHealth.TryTakeHit(damage);
     }
 
+    /// <summary>현재 위치에서 등장한 쪽으로 피해 없이 회수한다.</summary>
+    public void BeginRetreat()
+    {
+        if (retreating)
+            return;
+        retreating = true;
+        playerHealth = null;
+        retreatStart = transform.position;
+        retreatElapsed = 0f;
+    }
+
+    /// <summary>소유 패턴이 회수 연출 시간을 갱신한다.</summary>
+    public void AdvanceRetreat(float deltaTime)
+    {
+        if (!retreating)
+            return;
+        retreatElapsed += Mathf.Max(0f, deltaTime);
+        ApplyPosition(Vector3.Lerp(retreatStart, outsidePosition, retreatElapsed / travelDuration));
+    }
+
     private Bounds UpdatePose(float elapsed)
     {
         Vector3 position;
@@ -54,6 +84,11 @@ public sealed class TailLaneHazard : MonoBehaviour
         else
             position = Vector3.Lerp(insidePosition, outsidePosition,
                 (elapsed - travelDuration - holdDuration) / travelDuration);
+        return ApplyPosition(position);
+    }
+
+    private Bounds ApplyPosition(Vector3 position)
+    {
         transform.position = position;
         float bottom = Mathf.Max(field.min.y, position.y - area.extents.y);
         float top = Mathf.Min(field.max.y, position.y + area.extents.y);

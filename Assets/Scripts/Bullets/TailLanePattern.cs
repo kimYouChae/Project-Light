@@ -25,6 +25,30 @@ public sealed class TailLanePattern : MonoBehaviour
     private readonly List<Attack> attacks = new List<Attack>();
     private double patternTime;
     private double nextWarningTime;
+    private bool emitting;
+
+    /// <summary>레인 꼬리 회수가 모두 끝났는지 반환한다.</summary>
+    public bool IsRetreatComplete => attacks.Count == 0;
+
+    /// <summary>전투 시작부터 새 레인 경고와 공격을 생성한다.</summary>
+    public void StartEmission() => emitting = true;
+
+    /// <summary>경고를 취소하고 이미 나온 꼬리만 피해 없이 회수한다.</summary>
+    public void StopForBattleEnd()
+    {
+        emitting = false;
+        for (int i = attacks.Count - 1; i >= 0; i--)
+        {
+            Attack attack = attacks[i];
+            if (attack.warning != null)
+                warningPool?.Return(attack.warning);
+            attack.warning = null;
+            if (attack.hazard == null)
+                attacks.RemoveAt(i);
+            else
+                attack.hazard.BeginRetreat();
+        }
+    }
 
     private sealed class Attack
     {
@@ -74,6 +98,22 @@ public sealed class TailLanePattern : MonoBehaviour
 
     private void AdvancePattern(float deltaTime)
     {
+        if (!emitting)
+        {
+            for (int i = attacks.Count - 1; i >= 0; i--)
+            {
+                Attack attack = attacks[i];
+                if (attack.hazard != null)
+                {
+                    attack.hazard.AdvanceRetreat(deltaTime);
+                    if (!attack.hazard.IsRetreatComplete)
+                        continue;
+                }
+                ReturnAttack(attack);
+                attacks.RemoveAt(i);
+            }
+            return;
+        }
         patternTime += Mathf.Max(0f, deltaTime);
         while (nextWarningTime <= patternTime)
         {
@@ -137,6 +177,7 @@ public sealed class TailLanePattern : MonoBehaviour
 
     private void OnDisable()
     {
+        emitting = false;
         foreach (Attack attack in attacks)
             ReturnAttack(attack);
         attacks.Clear();

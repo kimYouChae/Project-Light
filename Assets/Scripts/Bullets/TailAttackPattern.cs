@@ -46,6 +46,30 @@ public sealed class TailAttackPattern : MonoBehaviour
     private Vector2 spawnDirection;
     private double patternTime;
     private double nextWarningTime;
+    private bool emitting;
+
+    /// <summary>발밑 꼬리 회수가 모두 끝났는지 반환한다.</summary>
+    public bool IsRetreatComplete => activeTails.Count == 0;
+
+    /// <summary>전투 시작부터 새 경고와 공격을 생성한다.</summary>
+    public void StartEmission() => emitting = true;
+
+    /// <summary>경고 예약을 취소하고 이미 나온 꼬리를 피해 없이 회수한다.</summary>
+    public void StopForBattleEnd()
+    {
+        emitting = false;
+        foreach (PendingEruption pending in pendingEruptions)
+            if (pending.warning != null)
+                warningPool?.Return(pending.warning);
+        pendingEruptions.Clear();
+        foreach (TestBullet tail in activeTails)
+        {
+            if (tail == null)
+                continue;
+            tail.FreezeForEnding();
+            tail.GetComponent<TailRiseVisual>().BeginRetreat();
+        }
+    }
 
     private sealed class PendingEruption
     {
@@ -98,6 +122,22 @@ public sealed class TailAttackPattern : MonoBehaviour
 
     private void AdvancePattern(float deltaTime)
     {
+        if (!emitting)
+        {
+            foreach (TestBullet tail in new List<TestBullet>(activeTails))
+            {
+                if (tail == null)
+                {
+                    activeTails.Remove(tail);
+                    continue;
+                }
+                TailRiseVisual visual = tail.GetComponent<TailRiseVisual>();
+                visual.AdvanceRetreat(deltaTime);
+                if (visual.IsRetreatComplete)
+                    tail.Expire();
+            }
+            return;
+        }
         double endTime = patternTime + Mathf.Max(0f, deltaTime);
         while (true)
         {
@@ -203,6 +243,7 @@ public sealed class TailAttackPattern : MonoBehaviour
 
     private void OnDisable()
     {
+        emitting = false;
         foreach (PendingEruption pending in pendingEruptions)
         {
             if (pending.warning != null)

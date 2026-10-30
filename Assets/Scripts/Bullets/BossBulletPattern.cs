@@ -38,6 +38,18 @@ public sealed class BossBulletPattern : MonoBehaviour
     private bool wavePhase = true;
     private readonly List<WaveBurst> waveBursts = new List<WaveBurst>();
     private WaveBurst spawnBurst;
+    private bool emitting;
+
+    /// <summary>전투 시작부터 새 공격을 생성한다.</summary>
+    public void StartEmission() => emitting = true;
+
+    /// <summary>이미 발사한 탄은 유지하고 새 공격과 예약 발사를 중단한다.</summary>
+    public void StopForBattleEnd()
+    {
+        emitting = false;
+        waveBursts.Clear();
+        spawnBurst = null;
+    }
 
     private sealed class WaveBurst
     {
@@ -84,6 +96,8 @@ public sealed class BossBulletPattern : MonoBehaviour
 
     private void AdvancePattern(float deltaTime)
     {
+        if (!emitting)
+            return;
         double endTime = patternTime + Mathf.Max(0f, deltaTime);
         while (true)
         {
@@ -195,6 +209,7 @@ public sealed class BossBulletPattern : MonoBehaviour
 
     private void OnDisable()
     {
+        emitting = false;
         foreach (TestBullet bullet in new List<TestBullet>(activeBullets))
             if (bullet != null)
                 bullet.Expire();

@@ -121,7 +121,7 @@ public sealed class PlayerBullet : MonoBehaviour
             + arcDirection * (4f * arcHeight * t * (1f - t));
         if (HitsBoss(previousPosition, transform.position))
         {
-            targetBoss.TryTakeDamage(damage);
+            targetBoss.TryTakePlayerAttackDamage(damage);
             ReturnToPool();
         }
         else if (t >= 1f)

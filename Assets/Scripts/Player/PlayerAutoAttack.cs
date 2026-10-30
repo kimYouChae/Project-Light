@@ -24,6 +24,13 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     [SerializeField, Min(1)] private int enhancedDamageMultiplier = 2;
     [SerializeField, Min(1f)] private float enhancedSizeMultiplier = 2f;
     [SerializeField, Min(1f)] private float enhancedLightMultiplier = 2f;
+    // ##TEMP 강화 공격 연속 발사 수와 탄 사이 간격.
+    [SerializeField, Min(1)] private int enhancedShotCount = 3;
+    [SerializeField, Min(0.01f)] private float enhancedShotInterval = 0.2f;
+
+    private readonly Queue<float> enhancedShotTimes = new Queue<float>();
+    private float shotClock;
+    private bool preparingEnhanced;
 
     private const int ATTACK_CYCLE_LENGTH = 3;
     private int attackIndex;
@@ -68,7 +75,16 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void Update()
     {
         if (pool == null || playerHealth.IsDead || targetBoss == null || targetBoss.IsDefeated)
+        {
+            enhancedShotTimes.Clear();
             return;
+        }
+        shotClock += Time.deltaTime;
+        while (enhancedShotTimes.Count > 0 && enhancedShotTimes.Peek() <= shotClock)
+        {
+            enhancedShotTimes.Dequeue();
+            FireBullet(true);
+        }
         float currentInterval = frenzy != null && frenzy.IsActive
             ? fireInterval * frenzyFireIntervalMultiplier
             : fireInterval;
@@ -76,15 +92,32 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         if (elapsed < currentInterval)
             return;
         elapsed %= currentInterval;
-        pool.Rent(prepareBullet);
+        BeginAttack();
+    }
+
+    private void BeginAttack()
+    {
+        bool enhanced = (frenzy != null && frenzy.IsActive)
+            || attackIndex == ATTACK_CYCLE_LENGTH - 1;
+        FireBullet(enhanced);
+        if (enhanced)
+        {
+            for (int i = 1; i < enhancedShotCount; i++)
+                enhancedShotTimes.Enqueue(shotClock + enhancedShotInterval * i);
+        }
         if (frenzy == null || !frenzy.IsActive)
             attackIndex = (attackIndex + 1) % ATTACK_CYCLE_LENGTH;
     }
 
+    private void FireBullet(bool enhanced)
+    {
+        preparingEnhanced = enhanced;
+        pool.Rent(prepareBullet);
+    }
+
     private void PrepareBullet(PlayerBullet bullet)
     {
-        bool enhanced = (frenzy != null && frenzy.IsActive)
-            || attackIndex == ATTACK_CYCLE_LENGTH - 1;
+        bool enhanced = preparingEnhanced;
         int shotDamage = enhanced ? damage * enhancedDamageMultiplier : damage;
         float shotRadius = enhanced ? bulletRadius * enhancedSizeMultiplier : bulletRadius;
         float lightMultiplier = enhanced ? enhancedLightMultiplier : 1f;
@@ -107,6 +140,9 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             if (bullet != null)
                 bullet.ReturnToPool();
         activeBullets.Clear();
+        enhancedShotTimes.Clear();
+        shotClock = 0f;
+        preparingEnhanced = false;
         elapsed = 0f;
     }
 
@@ -127,5 +163,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         enhancedDamageMultiplier = Mathf.Max(1, enhancedDamageMultiplier);
         enhancedSizeMultiplier = Mathf.Max(1f, enhancedSizeMultiplier);
         enhancedLightMultiplier = Mathf.Max(1f, enhancedLightMultiplier);
+        enhancedShotCount = Mathf.Max(1, enhancedShotCount);
+        enhancedShotInterval = Mathf.Max(0.01f, enhancedShotInterval);
     }
 }

@@ -69,6 +69,19 @@ public sealed class PlayerHealth : MonoBehaviour
             invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + Mathf.Max(0f, duration));
     }
 
+    /// <summary>살아 있는 플레이어의 체력을 최대치까지 회복한다.</summary>
+    public bool TryHeal(int amount)
+    {
+        if (!isActiveAndEnabled || isDead || amount <= 0)
+            return false;
+        int healedHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        if (healedHealth == currentHealth)
+            return false;
+        currentHealth = healedHealth;
+        playerLight.SetHealthRatio((float)currentHealth / maxHealth);
+        return true;
+    }
+
     private void OnValidate()
     {
         maxHealth = Mathf.Max(1, maxHealth);
