@@ -4,10 +4,11 @@ using UnityEngine;
 /// <summary>폭주 지속 시간과 PERFECT에 의한 시간 연장을 관리한다.</summary>
 [DefaultExecutionOrder(-200)]
 [DisallowMultipleComponent]
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerFrenzy : MonoBehaviour
 {
     // ##TEMP 기획서의 프로토타입 조정값.
-    [SerializeField, Min(0.01f)] private float duration = 6f;
+    [SerializeField] private PlayerStats stats;
     [SerializeField, Min(0f)] private float extensionPerBullet = 0.5f;
     [SerializeField, Min(0f)] private float maxExtension = 3f;
 
@@ -17,6 +18,8 @@ public sealed class PlayerFrenzy : MonoBehaviour
 
     /// <summary>폭주 종료 알림. 구독자는 비활성화 시 해제한다.</summary>
     public event Action Ended;
+
+    private void Awake() => stats = GetComponent<PlayerStats>();
 
     /// <summary>현재 폭주 중인지 여부.</summary>
     public bool IsActive => remainingTime > 0f;
@@ -30,7 +33,7 @@ public sealed class PlayerFrenzy : MonoBehaviour
     {
         if (IsActive)
             return;
-        activeDuration = duration;
+        activeDuration = stats.FrenzyDuration;
         remainingTime = activeDuration;
         extendedTime = 0f;
     }
@@ -57,7 +60,6 @@ public sealed class PlayerFrenzy : MonoBehaviour
 
     private void OnValidate()
     {
-        duration = Mathf.Max(0.01f, duration);
         extensionPerBullet = Mathf.Max(0f, extensionPerBullet);
         maxExtension = Mathf.Max(0f, maxExtension);
     }

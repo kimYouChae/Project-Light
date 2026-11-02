@@ -2,11 +2,12 @@ using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerMovement), typeof(PlayerLight))]
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerHealth : MonoBehaviour
 {
     [Header("체력과 피격 설정")]
     // ##TEMP 사용자 지정 프로토타입 수치. 인스펙터에서 조정한다.
-    [SerializeField, Min(1)] private int maxHealth = 10;
+    [SerializeField] private PlayerStats stats;
     [SerializeField, Min(1)] private int damagePerHit = 1;
     [SerializeField, Min(0f)] private float hitInvulnerabilityDuration = 1f;
 
@@ -21,6 +22,9 @@ public sealed class PlayerHealth : MonoBehaviour
     /// <summary>남은 헤일로 체력 칸 수. 0에서도 추가 피격 전까지 살아 있다.</summary>
     public int CurrentHealth => currentHealth;
 
+    /// <summary>현재 최대 체력.</summary>
+    public int MaxHealth => stats.MaxHealth;
+
     /// <summary>추가 피격으로 사망했는지 반환한다.</summary>
     public bool IsDead => isDead;
 
@@ -31,10 +35,32 @@ public sealed class PlayerHealth : MonoBehaviour
     {
         playerMovement = GetComponent<PlayerMovement>();
         playerLight = GetComponent<PlayerLight>();
-        currentHealth = maxHealth;
+        stats = GetComponent<PlayerStats>();
+        currentHealth = stats.MaxHealth;
         isDead = false;
         invulnerableUntil = float.NegativeInfinity;
         playerLight.SetHealthRatio(1f);
+    }
+
+    private void OnEnable()
+    {
+        if (stats != null)
+        {
+            stats.Changed += RefreshHealthRatio;
+            RefreshHealthRatio();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (stats != null)
+            stats.Changed -= RefreshHealthRatio;
+    }
+
+    private void RefreshHealthRatio()
+    {
+        currentHealth = Mathf.Min(currentHealth, stats.MaxHealth);
+        playerLight.SetHealthRatio((float)currentHealth / stats.MaxHealth);
     }
 
     /// <summary>실제 피격을 적용하면 true, 무적·사망·비활성 상태면 false를 반환한다.</summary>
@@ -58,7 +84,7 @@ public sealed class PlayerHealth : MonoBehaviour
 
         currentHealth = Mathf.Max(0, currentHealth - damage);
         invulnerableUntil = Time.time + hitInvulnerabilityDuration;
-        playerLight.SetHealthRatio((float)currentHealth / maxHealth);
+        RefreshHealthRatio();
         return true;
     }
 
@@ -74,17 +100,16 @@ public sealed class PlayerHealth : MonoBehaviour
     {
         if (!isActiveAndEnabled || isDead || amount <= 0)
             return false;
-        int healedHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        int healedHealth = Mathf.Min(stats.MaxHealth, currentHealth + amount);
         if (healedHealth == currentHealth)
             return false;
         currentHealth = healedHealth;
-        playerLight.SetHealthRatio((float)currentHealth / maxHealth);
+        RefreshHealthRatio();
         return true;
     }
 
     private void OnValidate()
     {
-        maxHealth = Mathf.Max(1, maxHealth);
         damagePerHit = Mathf.Max(1, damagePerHit);
         hitInvulnerabilityDuration = Mathf.Max(0f, hitInvulnerabilityDuration);
     }

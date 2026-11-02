@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>살아 있는 보스에게 일정 간격으로 풀링 기본 공격을 발사한다.</summary>
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerAutoAttack : MonoBehaviour
 {
     [SerializeField] private PlayerBullet bulletPrefab;
@@ -15,11 +16,9 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     // ##TEMP 폭주 중 발사 간격 배율. 0.5면 간격이 절반이다.
     [SerializeField, Range(0.01f, 1f)] private float frenzyFireIntervalMultiplier = 0.5f;
     [SerializeField, Min(0)] private int initialPoolCount = 16; // ##TEMP 초기 풀 크기
-    [SerializeField, Min(0.01f)] private float bulletSpeed = 6f; // ##TEMP 탄 속도
-    [SerializeField, Min(0.01f)] private float bulletRadius = 0.12f; // ##TEMP 탄 반경
+    [SerializeField] private PlayerStats stats;
     // ##TEMP 발사마다 동일 확률로 선택할 포물선 높이.
     [SerializeField] private float[] arcHeightOptions = { 1f, 2f, 1.5f };
-    [SerializeField, Min(1)] private int damage = 1; // ##TEMP 기본 공격 피해
     // ##TEMP 강화 공격 테스트용 배율. 인스펙터에서 조정한다.
     [SerializeField, Min(1)] private int enhancedDamageMultiplier = 2;
     [SerializeField, Min(1f)] private float enhancedSizeMultiplier = 2f;
@@ -44,6 +43,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void Awake()
     {
         frenzy = GetComponent<PlayerFrenzy>();
+        stats = GetComponent<PlayerStats>();
     }
 
     private void OnEnable()
@@ -60,7 +60,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void Start()
     {
         if (bulletPrefab == null || targetBoss == null || firePoint == null
-            || bulletParent == null || playerHealth == null || playfield == null)
+            || bulletParent == null || playerHealth == null || playfield == null || stats == null)
         {
             Debug.LogError("기본 공격의 프리팹, 보스, 발사점, 부모, 체력을 지정해주세요.", this);
             enabled = false;
@@ -118,15 +118,15 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void PrepareBullet(PlayerBullet bullet)
     {
         bool enhanced = preparingEnhanced;
-        int shotDamage = enhanced ? damage * enhancedDamageMultiplier : damage;
-        float shotRadius = enhanced ? bulletRadius * enhancedSizeMultiplier : bulletRadius;
+        int shotDamage = enhanced ? stats.Damage * enhancedDamageMultiplier : stats.Damage;
+        float shotRadius = enhanced ? stats.BulletRadius * enhancedSizeMultiplier : stats.BulletRadius;
         float lightMultiplier = enhanced ? enhancedLightMultiplier : 1f;
 
         float selectedHeight = arcHeightOptions[
             UnityEngine.Random.Range(0, arcHeightOptions.Length)];
-        bullet.Prepare(firePoint.position, targetBoss, bulletSpeed, selectedHeight,
+        bullet.Prepare(firePoint.position, targetBoss, stats.BulletSpeed, selectedHeight,
             shotRadius, shotDamage, lightMultiplier,
-            playfield.bounds, pool, returnedBullet);
+            playfield.bounds, pool, returnedBullet, sightRadiusMultiplier: stats.BulletSizeMultiplier);
         activeBullets.Add(bullet);
     }
 
@@ -153,13 +153,10 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         fireInterval = Mathf.Max(0.01f, fireInterval);
         frenzyFireIntervalMultiplier = Mathf.Clamp(frenzyFireIntervalMultiplier, 0.01f, 1f);
         initialPoolCount = Mathf.Max(0, initialPoolCount);
-        bulletSpeed = Mathf.Max(0.01f, bulletSpeed);
-        bulletRadius = Mathf.Max(0.01f, bulletRadius);
         if (arcHeightOptions == null || arcHeightOptions.Length == 0)
             arcHeightOptions = new[] { 1f, 2f, 1.5f }; // ##TEMP 초기 후보 복원
         for (int i = 0; i < arcHeightOptions.Length; i++)
             arcHeightOptions[i] = Mathf.Max(0f, arcHeightOptions[i]);
-        damage = Mathf.Max(1, damage);
         enhancedDamageMultiplier = Mathf.Max(1, enhancedDamageMultiplier);
         enhancedSizeMultiplier = Mathf.Max(1f, enhancedSizeMultiplier);
         enhancedLightMultiplier = Mathf.Max(1f, enhancedLightMultiplier);

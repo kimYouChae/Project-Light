@@ -8,6 +8,8 @@ public sealed class PlayerBullet : MonoBehaviour
     [SerializeField] private UnityEngine.Rendering.Universal.Light2D attackLight;
     private float baseLightIntensity;
     private bool lightIntensityCached;
+    private float baseLightOuterRadius;
+    private float baseLightInnerRadius;
     private Vector3 startPosition;
     private Vector3 endPosition;
     private Vector3 arcDirection;
@@ -25,7 +27,7 @@ public sealed class PlayerBullet : MonoBehaviour
     public void Prepare(Vector3 start, BossHealth target, float speed, float height,
         float radius, int hitDamage, float lightMultiplier,
         Bounds fieldBounds, ComponentPool<PlayerBullet> sourcePool,
-        Action<PlayerBullet> onReturned)
+        Action<PlayerBullet> onReturned, float sightRadiusMultiplier = 1f)
     {
         startPosition = start;
         endPosition = target.transform.position;
@@ -61,7 +63,12 @@ public sealed class PlayerBullet : MonoBehaviour
             visual.localScale = Vector3.one * (radius * 2f);
         CacheLightIntensity();
         if (attackLight != null)
+        {
             attackLight.intensity = baseLightIntensity * lightMultiplier;
+            // 카드 확대분을 원래 빛 반경에 적용해 재대여 때 누적되지 않게 한다.
+            attackLight.pointLightOuterRadius = baseLightOuterRadius * sightRadiusMultiplier;
+            attackLight.pointLightInnerRadius = baseLightInnerRadius * sightRadiusMultiplier;
+        }
         prepared = true;
     }
 
@@ -70,6 +77,8 @@ public sealed class PlayerBullet : MonoBehaviour
         if (lightIntensityCached || attackLight == null)
             return;
         baseLightIntensity = attackLight.intensity;
+        baseLightOuterRadius = attackLight.pointLightOuterRadius;
+        baseLightInnerRadius = attackLight.pointLightInnerRadius;
         lightIntensityCached = true;
     }
 

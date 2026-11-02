@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerHealth), typeof(PlayerLight))]
 [RequireComponent(typeof(PlayerFrenzy))]
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerPerfectDodge : MonoBehaviour
 {
     [Header("탄 관리자")]
@@ -13,7 +14,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
     [Header("퍼펙트 회피")]
     // ##TEMP 승인한 프로토타입 시작값. 인스펙터에서 조정한다.
-    [SerializeField, Min(0f)] private float successInvulnerability = 0.25f;
+    [SerializeField] private PlayerStats stats;
     [SerializeField, Min(0f)] private float failureLockDuration = 0.5f;
     [SerializeField, Min(1)] private int simultaneousBonusLimit = 3;
     // ##TEMP PERFECT 판정선 안팎의 추가 허용 폭.
@@ -22,7 +23,6 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
     [Header("게이지")]
     // ##TEMP 승인한 프로토타입 시작값.
     [SerializeField, Min(1f)] private float maxGauge = 100f;
-    [SerializeField, Min(0f)] private float gaugePerBullet = 10f;
     [SerializeField] private float currentGauge;
 
     private PlayerHealth playerHealth;
@@ -45,6 +45,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         playerHealth = GetComponent<PlayerHealth>();
         playerLight = GetComponent<PlayerLight>();
         frenzy = GetComponent<PlayerFrenzy>();
+        stats = GetComponent<PlayerStats>();
         currentGauge = 0f;
         nextInputTime = float.NegativeInfinity;
     }
@@ -80,7 +81,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
             return;
         }
 
-        playerHealth.GrantInvulnerability(successInvulnerability);
+        playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
         int bonusCount = Mathf.Min(count, simultaneousBonusLimit);
         if (frenzy.IsActive)
         {
@@ -88,7 +89,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         }
         else
         {
-            currentGauge = Mathf.Min(maxGauge, currentGauge + bonusCount * gaugePerBullet);
+            currentGauge = Mathf.Min(maxGauge, currentGauge + bonusCount * stats.GaugePerBullet);
             if (currentGauge >= maxGauge)
             {
                 currentGauge = 0f;
@@ -99,12 +100,10 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
     private void OnValidate()
     {
-        successInvulnerability = Mathf.Max(0f, successInvulnerability);
         failureLockDuration = Mathf.Max(0f, failureLockDuration);
         simultaneousBonusLimit = Mathf.Max(1, simultaneousBonusLimit);
         perfectTolerance = Mathf.Max(0f, perfectTolerance);
         maxGauge = Mathf.Max(1f, maxGauge);
-        gaugePerBullet = Mathf.Max(0f, gaugePerBullet);
         currentGauge = Mathf.Clamp(currentGauge, 0f, maxGauge);
     }
 }

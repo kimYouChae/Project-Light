@@ -2,16 +2,19 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerMovement : MonoBehaviour
 {
     [Header("이동 설정")]
     // ##TEMP 프로토타입 이동 속도와 몸체 반경. 인스펙터에서 조정한다.
-    [SerializeField, Min(0f)] private float moveSpeed = 5f;
+    [SerializeField] private PlayerStats stats;
     [SerializeField, Min(0f)] private float bodyRadius = 0.25f;
     [SerializeField] private SpriteRenderer playfield;
 
     /// <summary>이동 경계와 몸체 피격 판정에 사용하는 월드 반경.</summary>
     public float BodyRadius => bodyRadius;
+
+    private void Awake() => stats = GetComponent<PlayerStats>();
 
     private void Update()
     {
@@ -27,11 +30,11 @@ public sealed class PlayerMovement : MonoBehaviour
 
     private void Move(Vector2 direction, float deltaTime)
     {
-        if (playfield == null)
+        if (playfield == null || stats == null)
             return;
 
         Vector3 position = transform.position;
-        Vector2 offset = Vector2.ClampMagnitude(direction, 1f) * moveSpeed * Mathf.Max(0f, deltaTime);
+        Vector2 offset = Vector2.ClampMagnitude(direction, 1f) * stats.MoveSpeed * Mathf.Max(0f, deltaTime);
         position.x += offset.x;
         position.y += offset.y;
 
@@ -46,7 +49,6 @@ public sealed class PlayerMovement : MonoBehaviour
 
     private void OnValidate()
     {
-        moveSpeed = Mathf.Max(0f, moveSpeed);
         bodyRadius = Mathf.Max(0f, bodyRadius);
     }
 }

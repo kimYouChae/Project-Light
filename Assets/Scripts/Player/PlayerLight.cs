@@ -3,12 +3,13 @@ using UnityEngine.Rendering.Universal;
 
 [ExecuteAlways]
 [DisallowMultipleComponent]
+[RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerLight : MonoBehaviour
 {
     [Header("월드 좌표 반경")]
     // ##TEMP 코어와 헤일로의 초기 반경. 게임 판정의 기준값이다.
     [SerializeField, Min(0.01f)] private float coreRadius = 0.8f;
-    [SerializeField, Min(0f)] private float haloRadius = 3f;
+    [SerializeField] private PlayerStats stats;
 
     [Header("표시 참조")]
     [SerializeField] private LineRenderer coreLine;
@@ -29,7 +30,9 @@ public sealed class PlayerLight : MonoBehaviour
     public float CoreRadius => coreRadius;
 
     /// <summary>시야와 체력에 사용하는 헤일로의 월드 반경.</summary>
-    public float HaloRadius => haloRadius * healthRatio;
+    public float HaloRadius => stats != null ? stats.MaxHaloRadius * healthRatio : 0f;
+
+    private void OnEnable() => stats = GetComponent<PlayerStats>();
 
     /// <summary>코어는 유지하고 최대 헤일로 반경에 남은 체력 비율을 적용한다.</summary>
     public void SetHealthRatio(float ratio)
@@ -56,6 +59,8 @@ public sealed class PlayerLight : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (stats == null)
+            stats = GetComponent<PlayerStats>();
         // 표시는 판정용 반경으로 만들고 Light2D 값은 판정에 사용하지 않는다.
         if (coreLine != null)
         {
@@ -94,7 +99,6 @@ public sealed class PlayerLight : MonoBehaviour
     private void OnValidate()
     {
         coreRadius = Mathf.Max(0.01f, coreRadius);
-        haloRadius = Mathf.Max(0f, haloRadius);
         lineWidth = Mathf.Max(0.001f, lineWidth);
         segmentCount = Mathf.Clamp(segmentCount, 16, 256);
         haloIntensity = Mathf.Max(0f, haloIntensity);
