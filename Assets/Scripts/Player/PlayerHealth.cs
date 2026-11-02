@@ -5,13 +5,13 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerHealth : MonoBehaviour
 {
-    [Header("체력과 피격 설정")]
+    [Header("===피격데미지 / 피격 후 무적 시간===")]
     // ##TEMP 사용자 지정 프로토타입 수치. 인스펙터에서 조정한다.
     [SerializeField] private PlayerStats stats;
-    [SerializeField, Min(1)] private int damagePerHit = 1;
-    [SerializeField, Min(0f)] private float hitInvulnerabilityDuration = 1f;
+    [SerializeField, Min(1)] private int damagePerHit = 1;      // 피격 데미지
+    [SerializeField, Min(0f)] private float hitInvulnerabilityDuration = 1f;    // 피격 후 무적
 
-    [Header("현재 상태 — 실행 중 확인용")]
+    [Header("===현재상태===")]
     [SerializeField] private int currentHealth;
     [SerializeField] private bool isDead;
 

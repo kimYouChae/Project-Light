@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerMovement : MonoBehaviour
 {
-    [Header("이동 설정")]
+    [Header("===이동 설정===")]
     // ##TEMP 프로토타입 이동 속도와 몸체 반경. 인스펙터에서 조정한다.
     [SerializeField] private PlayerStats stats;
     [SerializeField, Min(0f)] private float bodyRadius = 0.25f;

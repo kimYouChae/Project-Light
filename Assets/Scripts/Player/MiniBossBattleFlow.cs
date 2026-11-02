@@ -7,20 +7,23 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 {
     private enum BattleState { Waiting, Fighting, Absorbing, Retreating, RewardPending, Complete }
 
+    [Header("===Component===")]
     [SerializeField] private BossHealth bossHealth;
-    [SerializeField] private Transform bossTransform;
-    [SerializeField] private Transform retreatPoint;
     [SerializeField] private BossBulletPattern bulletPattern;
     [SerializeField] private TailAttackPattern tailPattern;
     [SerializeField] private TailLanePattern lanePattern;
     [SerializeField] private BulletRegistry bulletRegistry;
+
+    [Header("===Trs===")]
+    [SerializeField] private Transform bossTransform;
+    [SerializeField] private Transform retreatPoint;
     [SerializeField] private GameObject completeText;
-    // ##TEMP 사용자 승인 전투 종료 연출 시간.
-    [SerializeField, Min(0f)] private float freezeDuration = 0.15f;
-    [SerializeField, Min(0.01f)] private float absorptionDuration = 0.6f;
-    [SerializeField, Min(0.01f)] private float retreatDuration = 1f;
-    // ##TEMP 완료 텍스트 표시 시간.
-    [SerializeField, Min(0f)] private float completeDisplayDuration = 3f;
+
+    [Header("===연출 종료 수치===")]
+    [SerializeField, Min(0f)] private float freezeDuration = 0.15f; // 보스가 죽은 후 탄이 자리에 멈춰있는 시간
+    [SerializeField, Min(0.01f)] private float absorptionDuration = 0.6f; // 멈춘 직후 보스에게 빨려들어가는 시간
+    [SerializeField, Min(0.01f)] private float retreatDuration = 1f; // 회수 끝난 후 보스가 퇴장하는 시간 
+    [SerializeField, Min(0f)] private float completeDisplayDuration = 3f;   // "Complete" 텍스트 보여주는 시간
     [SerializeField] private BattleState state;
 
     private readonly List<TestBullet> absorptionBullets = new List<TestBullet>();

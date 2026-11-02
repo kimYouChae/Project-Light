@@ -6,26 +6,31 @@ using UnityEngine;
 [RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerAutoAttack : MonoBehaviour
 {
+    [Header("===Component===")]
+    [SerializeField] private PlayerStats stats;
     [SerializeField] private PlayerBullet bulletPrefab;
     [SerializeField] private BossHealth targetBoss;
-    [SerializeField] private Transform firePoint;
-    [SerializeField] private Transform bulletParent;
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private SpriteRenderer playfield;
+    [SerializeField] private Transform firePoint;
+    [Header("===Trs===")]
+    [SerializeField] private Transform bulletParent;
     [SerializeField, Min(0.01f)] private float fireInterval = 2f;
+
+    [Header("===강화 스탯===")]
     // ##TEMP 폭주 중 발사 간격 배율. 0.5면 간격이 절반이다.
     [SerializeField, Range(0.01f, 1f)] private float frenzyFireIntervalMultiplier = 0.5f;
     [SerializeField, Min(0)] private int initialPoolCount = 16; // ##TEMP 초기 풀 크기
-    [SerializeField] private PlayerStats stats;
-    // ##TEMP 발사마다 동일 확률로 선택할 포물선 높이.
-    [SerializeField] private float[] arcHeightOptions = { 1f, 2f, 1.5f };
-    // ##TEMP 강화 공격 테스트용 배율. 인스펙터에서 조정한다.
-    [SerializeField, Min(1)] private int enhancedDamageMultiplier = 2;
-    [SerializeField, Min(1f)] private float enhancedSizeMultiplier = 2f;
-    [SerializeField, Min(1f)] private float enhancedLightMultiplier = 2f;
-    // ##TEMP 강화 공격 연속 발사 수와 탄 사이 간격.
-    [SerializeField, Min(1)] private int enhancedShotCount = 3;
-    [SerializeField, Min(0.01f)] private float enhancedShotInterval = 0.2f;
+    // ##TEMP 
+    // 발사마다 동일 확률로 선택할 포물선 높이.
+    [SerializeField] private float[] arcHeightOptions = { 1f, 2f, 1.5f }; 
+    // ##TEMP 
+    [SerializeField, Min(1)] private int enhancedDamageMultiplier = 2;  // 강화 데미지 배욜 
+    [SerializeField, Min(1f)] private float enhancedSizeMultiplier = 2f; // 강화 사이즈 배율
+    [SerializeField, Min(1f)] private float enhancedLightMultiplier = 2f;   //강화 빛 배율
+    // ##TEMP 
+    [SerializeField, Min(1)] private int enhancedShotCount = 3;     //강화 탄 발사 갯수
+    [SerializeField, Min(0.01f)] private float enhancedShotInterval = 0.2f; // 강화탄 사이 간격
 
     private readonly Queue<float> enhancedShotTimes = new Queue<float>();
     private float shotClock;

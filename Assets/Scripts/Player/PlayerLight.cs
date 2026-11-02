@@ -6,23 +6,24 @@ using UnityEngine.Rendering.Universal;
 [RequireComponent(typeof(PlayerStats))]
 public sealed class PlayerLight : MonoBehaviour
 {
-    [Header("월드 좌표 반경")]
-    // ##TEMP 코어와 헤일로의 초기 반경. 게임 판정의 기준값이다.
-    [SerializeField, Min(0.01f)] private float coreRadius = 0.8f;
     [SerializeField] private PlayerStats stats;
 
-    [Header("표시 참조")]
+    [Header("===헤일로 반경===")]
+    // ##TEMP 코어와 헤일로의 초기 반경. 게임 판정의 기준값이다.
+    [SerializeField, Min(0.01f)] private float coreRadius = 0.8f;
+
+    [Header("===표시 참조===")]
     [SerializeField] private LineRenderer coreLine;
     [SerializeField] private Light2D haloLight;
 
-    [Header("표시 설정")]
+    [Header("===표시 설정===")]
     // ##TEMP 선의 굵기, 분할 수, 색상과 빛의 강도·감쇠 설정.
-    [SerializeField, Min(0.001f)] private float lineWidth = 0.035f;
-    [SerializeField, Range(16, 256)] private int segmentCount = 96;
-    [SerializeField] private Color coreColor = new Color(1f, 0.87f, 0.45f, 1f);
-    [SerializeField] private Color haloColor = new Color(1f, 0.83f, 0.46f, 1f);
-    [SerializeField, Min(0f)] private float haloIntensity = 1.5f;
-    [SerializeField, Range(0f, 1f)] private float innerRadiusRatio = 0.4f;
+    [SerializeField, Min(0.001f)] private float lineWidth = 0.035f;     // 선 두께
+    [SerializeField, Range(16, 256)] private int segmentCount = 96;     // 코어 근처 원 그릴 때 쓰는 점 갯수 
+    [SerializeField] private Color coreColor = new Color(1f, 0.87f, 0.45f, 1f); // 코어 색
+    [SerializeField] private Color haloColor = new Color(1f, 0.83f, 0.46f, 1f); // 근처 빛 색 
+    [SerializeField, Min(0f)] private float haloIntensity = 1.5f;       // 빛 밝기
+    [SerializeField, Range(0f, 1f)] private float innerRadiusRatio = 0.4f;  // 밝게 유지되는 안쪽 영역 
 
     private float healthRatio = 1f;
 
