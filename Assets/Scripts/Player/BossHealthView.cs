@@ -14,7 +14,7 @@ public sealed class BossHealthView : MonoBehaviour
             || barRoot == null || healthFill == null)
             return;
 
-        bool visible = !battleFlow.IsRewardPending;
+        bool visible = !battleFlow.IsRetreatComplete;
         if (barRoot.activeSelf != visible)
             barRoot.SetActive(visible);
 

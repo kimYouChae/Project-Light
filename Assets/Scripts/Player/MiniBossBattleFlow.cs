@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>짤보스 전투 시작·적탄 흡수·퇴장과 보상 연결을 관리한다.</summary>
 public sealed class MiniBossBattleFlow : MonoBehaviour
 {
-    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, RewardPending }
+    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, RewardPending, Complete }
 
     [SerializeField] private BossHealth bossHealth;
     [SerializeField] private Transform bossTransform;
@@ -19,6 +19,8 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
     [SerializeField, Min(0f)] private float freezeDuration = 0.15f;
     [SerializeField, Min(0.01f)] private float absorptionDuration = 0.6f;
     [SerializeField, Min(0.01f)] private float retreatDuration = 1f;
+    // ##TEMP 완료 텍스트 표시 시간.
+    [SerializeField, Min(0f)] private float completeDisplayDuration = 3f;
     [SerializeField] private BattleState state;
 
     private readonly List<TestBullet> absorptionBullets = new List<TestBullet>();
@@ -30,6 +32,9 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
     /// <summary>보상 연결 단계까지 도달했는지 반환한다.</summary>
     public bool IsRewardPending => state == BattleState.RewardPending;
+
+    /// <summary>보스 퇴장이 끝나 HP바를 숨겨야 하는지 반환한다.</summary>
+    public bool IsRetreatComplete => state == BattleState.Complete || state == BattleState.RewardPending;
 
     private void OnEnable()
     {
@@ -87,6 +92,8 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             UpdateAbsorption(Time.deltaTime);
         else if (state == BattleState.Retreating)
             UpdateRetreat(Time.deltaTime);
+        else if (state == BattleState.Complete)
+            UpdateComplete(Time.deltaTime);
     }
 
     private void UpdateAbsorption(float deltaTime)
@@ -114,8 +121,18 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             Mathf.SmoothStep(0f, 1f, progress));
         if (progress < 1f)
             return;
-        state = BattleState.RewardPending;
+        state = BattleState.Complete;
+        stateElapsed = 0f;
         completeText.SetActive(true);
+    }
+
+    private void UpdateComplete(float deltaTime)
+    {
+        stateElapsed += Mathf.Max(0f, deltaTime);
+        if (stateElapsed < completeDisplayDuration)
+            return;
+        completeText.SetActive(false);
+        state = BattleState.RewardPending;
         RewardRequested?.Invoke();
     }
 
@@ -140,5 +157,6 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         freezeDuration = Mathf.Max(0f, freezeDuration);
         absorptionDuration = Mathf.Max(0.01f, absorptionDuration);
         retreatDuration = Mathf.Max(0.01f, retreatDuration);
+        completeDisplayDuration = Mathf.Max(0f, completeDisplayDuration);
     }
 }
