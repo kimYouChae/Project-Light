@@ -21,13 +21,21 @@ public sealed class PlayerStats : MonoBehaviour
     [SerializeField, Min(0f)] private float basePerfectInvulnerability = 0.25f;
 
     [Header("카드 증가량 — 비율은 0.1 = 10%, 시간은 초")]
-    // ##TEMP 기획서의 스탯 카드 시작값.
+    // ##TEMP 
+    // 카드 자체 증가량 ( 10% 증가 ) , 빛조각 1개당 추가 증가량 ( 2% 증가 )
+    // 날렵한 발 - 이속증가
     [SerializeField] private StatRewardAmount swiftFeet = new StatRewardAmount(0.10f, 0.02f);
+    // 큰 등불 - 투사체 크기 + 
     [SerializeField] private StatRewardAmount largeLantern = new StatRewardAmount(0.15f, 0.03f);
+    // 빠른 빛 - 투사체 속도 + 
     [SerializeField] private StatRewardAmount fastLight = new StatRewardAmount(0.15f, 0.03f);
+    // 넓은 헤일로 - 최대 헤일로 반경 + , 최대 체력 + 
     [SerializeField] private StatRewardAmount wideHalo = new StatRewardAmount(0.10f, 0.02f);
+    // 고동 -  perfect 게이지 충전 량 + 
     [SerializeField] private StatRewardAmount pulse = new StatRewardAmount(0.15f, 0.03f);
+    // 긴 숨 - 폭주 지속시간 +
     [SerializeField] private StatRewardAmount longBreath = new StatRewardAmount(0.5f, 0.1f);
+    // 찰나 - perfect 성공 무적시간 + 
     [SerializeField] private StatRewardAmount instant = new StatRewardAmount(0.05f, 0.01f);
 
     [Header("카드 누적 증가분 — 선택 기록에서 자동 계산")]
