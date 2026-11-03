@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f1d60ff78e534a49b0ef3821cff46d4, type: 3}
+  m_Name: VenomStrike
+  m_EditorClassIdentifier:
+  id: VenomStrike
+  displayName: "맹독 강타"
+  description: "강화 평타 적중 시 독 2중첩을 부여한다. 빛 조각 2개당 +1중첩 추가."
+  tag: 1
+  attackTargets: 6
+  baseEffectAmount: 2
+  additionalEffectAmount: 1
+  shardsPerIncrease: 2
