@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 /// <summary>짤보스 전투 시작·적탄 흡수·퇴장과 완료 표시를 관리한다.</summary>
@@ -28,6 +29,21 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
     private readonly List<TestBullet> absorptionBullets = new List<TestBullet>();
     private float stateElapsed;
     private Vector3 retreatStart;
+
+    // COMPLETE 표시까지 끝났을 때 전달할 보상 요청
+    private Action rewardRequested;
+
+    /// <summary>보상 요청 알림을 등록합니다.</summary>
+    public void RegisterRewardRequested(Action callback)
+    {
+        rewardRequested += callback;
+    }
+
+    /// <summary>보상 요청 알림을 해제합니다.</summary>
+    public void UnregisterRewardRequested(Action callback)
+    {
+        rewardRequested -= callback;
+    }
 
     /// <summary>보스 퇴장이 끝나 HP바를 숨겨야 하는지 반환한다.</summary>
     public bool IsRetreatComplete => state == BattleState.Complete || state == BattleState.Finished;
@@ -129,6 +145,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             return;
         completeText.SetActive(false);
         state = BattleState.Finished;
+        rewardRequested?.Invoke();
     }
 
     private void OnDisable()

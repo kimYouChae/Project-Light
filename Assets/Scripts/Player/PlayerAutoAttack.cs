@@ -79,6 +79,12 @@ public sealed class PlayerAutoAttack : MonoBehaviour
 
     private void Update()
     {
+        // 필드 시간이 정지된 동안 이동·공격·판정·획득을 처리하지 않는다.
+        if (Time.timeScale <= 0f)
+        {
+            return;
+        }
+
         if (pool == null || playerHealth.IsDead || targetBoss == null || targetBoss.IsDefeated)
         {
             enhancedShotTimes.Clear();

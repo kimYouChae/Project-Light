@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 2
   additionalEffectAmount: 1
   shardsPerIncrease: 2
+  effectDisplayFormat: "강화 평타 서리 +{0:0.##}"

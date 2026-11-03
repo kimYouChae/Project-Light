@@ -32,6 +32,9 @@ public sealed class RewardCardData : ScriptableObject
     // 추가 효과 한 번에 필요한 빛 조각 개수
     [SerializeField, Min(1)] private int shardsPerIncrease = 1;
 
+    // 계산된 효과 수치를 화면에 표시할 서식
+    [SerializeField] private string effectDisplayFormat;
+
     /// <summary>
     /// 카드의 ID를 반환합니다.
     /// </summary>
@@ -71,4 +74,9 @@ public sealed class RewardCardData : ScriptableObject
     /// 추가 효과 한 번에 필요한 빛 조각 개수를 반환합니다.
     /// </summary>
     public int ShardsPerIncrease => shardsPerIncrease;
+
+    /// <summary>
+    /// 효과 수치의 표시 서식을 반환합니다.
+    /// </summary>
+    public string EffectDisplayFormat => effectDisplayFormat;
 }

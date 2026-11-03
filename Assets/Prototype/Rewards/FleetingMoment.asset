@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 0.05
   additionalEffectAmount: 0.01
   shardsPerIncrease: 1
+  effectDisplayFormat: "퍼펙트 회피 무적 시간 +{0:0.##}초"

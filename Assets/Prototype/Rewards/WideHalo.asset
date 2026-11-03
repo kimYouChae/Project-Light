@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 0.1
   additionalEffectAmount: 0.02
   shardsPerIncrease: 1
+  effectDisplayFormat: "헤일로 반경 +{0:0.#%} (시야·최대 체력 증가)"

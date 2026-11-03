@@ -52,6 +52,12 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
     private void Update()
     {
+        // 필드 시간이 정지된 동안 이동·공격·판정·획득을 처리하지 않는다.
+        if (Time.timeScale <= 0f)
+        {
+            return;
+        }
+
         Keyboard keyboard = Keyboard.current;
         if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
             TryPerfectDodge();

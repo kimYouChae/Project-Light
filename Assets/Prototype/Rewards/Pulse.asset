@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 0.15
   additionalEffectAmount: 0.03
   shardsPerIncrease: 1
+  effectDisplayFormat: "폭주 게이지 충전량 +{0:0.#%}"

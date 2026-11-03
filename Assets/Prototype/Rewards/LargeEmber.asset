@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 0.2
   additionalEffectAmount: 0.05
   shardsPerIncrease: 1
+  effectDisplayFormat: "강화 평타 불씨 범위 +{0:0.#%}"

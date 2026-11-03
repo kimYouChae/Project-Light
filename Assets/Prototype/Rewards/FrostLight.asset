@@ -20,3 +20,4 @@ MonoBehaviour:
   baseEffectAmount: 1
   additionalEffectAmount: 0 # ##TEMP 빛 조각 강화 수치 미정
   shardsPerIncrease: 1 # ##TEMP 강화 비용 미정, 필드 기본값
+  effectDisplayFormat: "서리 {0:0.##} (빛 조각 강화 수치 미정)"

@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>이번 플레이에서 모은 빛 조각 보유량을 관리한다.</summary>
 public sealed class LightShardWallet : MonoBehaviour
 {
+    // ##TEMP 현재 테스트 씬의 시작 보유량은 10개로 설정한다.
     [SerializeField, Min(0)] private int count;
 
     /// <summary>현재 보유한 빛 조각 수.</summary>
