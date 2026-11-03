@@ -1,11 +1,10 @@
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>짤보스 전투 시작·적탄 흡수·퇴장과 보상 연결을 관리한다.</summary>
+/// <summary>짤보스 전투 시작·적탄 흡수·퇴장과 완료 표시를 관리한다.</summary>
 public sealed class MiniBossBattleFlow : MonoBehaviour
 {
-    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, RewardPending, Complete }
+    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, Finished, Complete }
 
     [Header("===Component===")]
     [SerializeField] private BossHealth bossHealth;
@@ -30,14 +29,8 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
     private float stateElapsed;
     private Vector3 retreatStart;
 
-    /// <summary>퇴장과 완료 표시 후 발생한다. 구독자는 비활성화 시 해제한다.</summary>
-    public event Action RewardRequested;
-
-    /// <summary>보상 연결 단계까지 도달했는지 반환한다.</summary>
-    public bool IsRewardPending => state == BattleState.RewardPending;
-
     /// <summary>보스 퇴장이 끝나 HP바를 숨겨야 하는지 반환한다.</summary>
-    public bool IsRetreatComplete => state == BattleState.Complete || state == BattleState.RewardPending;
+    public bool IsRetreatComplete => state == BattleState.Complete || state == BattleState.Finished;
 
     private void OnEnable()
     {
@@ -135,8 +128,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         if (stateElapsed < completeDisplayDuration)
             return;
         completeText.SetActive(false);
-        state = BattleState.RewardPending;
-        RewardRequested?.Invoke();
+        state = BattleState.Finished;
     }
 
     private void OnDisable()

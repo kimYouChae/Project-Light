@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerMovement), typeof(PlayerLight))]
@@ -45,16 +45,7 @@ public sealed class PlayerHealth : MonoBehaviour
     private void OnEnable()
     {
         if (stats != null)
-        {
-            stats.Changed += RefreshHealthRatio;
             RefreshHealthRatio();
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (stats != null)
-            stats.Changed -= RefreshHealthRatio;
     }
 
     private void RefreshHealthRatio()
