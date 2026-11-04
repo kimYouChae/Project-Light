@@ -11,13 +11,15 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f1d60ff78e534a49b0ef3821cff46d4, type: 3}
   m_Name: LongBreath
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: LongBreath
-  displayName: "긴 숨"
-  description: "폭주 지속 시간 +0.5초. 빛 조각 1개당 +0.1초 추가."
+  displayName: "\uAE34 \uC228"
+  description: "\uD3ED\uC8FC \uC9C0\uC18D \uC2DC\uAC04 +0.5\uCD08. \uBE5B \uC870\uAC01
+    1\uAC1C\uB2F9 +0.1\uCD08 \uCD94\uAC00."
   tag: 0
+  statEffect: 6
   attackTargets: 0
   baseEffectAmount: 0.5
   additionalEffectAmount: 0.1
   shardsPerIncrease: 1
-  effectDisplayFormat: "폭주 지속 시간 +{0:0.##}초"
+  effectDisplayFormat: "\uD3ED\uC8FC \uC9C0\uC18D \uC2DC\uAC04 +{0:0.##}\uCD08"

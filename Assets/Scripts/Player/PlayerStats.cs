@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 /// <summary>플레이어 기본 스탯을 한곳에서 관리한다.</summary>
 [DefaultExecutionOrder(-300)]
@@ -21,44 +21,23 @@ public sealed class PlayerStats : MonoBehaviour
     // 이번 플레이의 획득 기록
     [SerializeField] private RewardSelectionHistory history;
 
-    // 이동속도 증가에 사용할 날렵한 발 카드
-    [SerializeField] private RewardCardData moveSpeedCard;
-
     // 획득 기록에서 계산한 이동속도 증가율 합계
     private float moveSpeedBonus;
-
-    // 투사체 크기 증가에 사용할 큰 등불 카드
-    [SerializeField] private RewardCardData bulletSizeCard;
 
     // 획득 기록에서 계산한 투사체 크기 증가율 합계
     private float bulletSizeBonus;
 
-    // 투사체 속도 증가에 사용할 빠른 빛 카드
-    [SerializeField] private RewardCardData bulletSpeedCard;
-
     // 획득 기록에서 계산한 투사체 속도 증가율 합계
     private float bulletSpeedBonus;
-
-    // 헤일로 반경과 최대 체력 증가에 사용할 카드
-    [SerializeField] private RewardCardData haloCard;
 
     // 획득 기록에서 계산한 헤일로 증가율 합계
     private float haloBonus;
 
-    // 게이지 충전량 증가에 사용할 고동 카드
-    [SerializeField] private RewardCardData gaugeCard;
-
     // 획득 기록에서 계산한 게이지 충전량 증가율 합계
     private float gaugeBonus;
 
-    // 폭주 지속 시간 증가에 사용할 긴 숨 카드
-    [SerializeField] private RewardCardData frenzyDurationCard;
-
     // 획득 기록에서 계산한 폭주 추가 시간 합계
     private float frenzyDurationBonus;
-
-    // 퍼펙트 회피 무적 시간 증가에 사용할 찰나 카드
-    [SerializeField] private RewardCardData perfectInvulnerabilityCard;
 
     // 획득 기록에서 계산한 퍼펙트 회피 추가 무적 시간 합계
     private float perfectInvulnerabilityBonus;
@@ -105,159 +84,41 @@ public sealed class PlayerStats : MonoBehaviour
     {
         if (history != null)
         {
-            history.RegisterChanged(RecalculateMoveSpeed);
-            history.RegisterChanged(RecalculateBulletSize);
-            history.RegisterChanged(RecalculateBulletSpeed);
-            history.RegisterChanged(RecalculateHalo);
-            history.RegisterChanged(RecalculateGauge);
-            history.RegisterChanged(RecalculateFrenzyDuration);
-            history.RegisterChanged(RecalculatePerfectInvulnerability);
+            history.RegisterChanged(RecalculateStats);
         }
 
-        // 활성화될 때 기존 획득 기록도 반영한다.
-        RecalculateMoveSpeed();
-        RecalculateBulletSize();
-        RecalculateBulletSpeed();
-        RecalculateHalo();
-        RecalculateGauge();
-        RecalculateFrenzyDuration();
-        RecalculatePerfectInvulnerability();
+        RecalculateStats();
     }
 
     private void OnDisable()
     {
         if (history != null)
         {
-            history.UnregisterChanged(RecalculateMoveSpeed);
-            history.UnregisterChanged(RecalculateBulletSize);
-            history.UnregisterChanged(RecalculateBulletSpeed);
-            history.UnregisterChanged(RecalculateHalo);
-            history.UnregisterChanged(RecalculateGauge);
-            history.UnregisterChanged(RecalculateFrenzyDuration);
-            history.UnregisterChanged(RecalculatePerfectInvulnerability);
+            history.UnregisterChanged(RecalculateStats);
         }
     }
 
-    private void RecalculateMoveSpeed()
+    private void RecalculateStats()
     {
-        // 항상 전체 기록에서 다시 계산하여 중복 적용을 막는다.
+        // 전체 기록에서 다시 계산하기 전에 보너스를 초기화한다.
         moveSpeedBonus = 0f;
-
-        if (history == null || moveSpeedCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            // 이름이나 ID 대신 카드 에셋 참조를 비교한다.
-            if (record == null || record.Card != moveSpeedCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            float bonus = card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-
-            moveSpeedBonus += bonus;
-        }
-    }
-
-    private void RecalculateBulletSize()
-    {
-        // 항상 전체 기록에서 다시 계산하여 중복 적용을 막는다.
         bulletSizeBonus = 0f;
-
-        if (history == null || bulletSizeCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            if (record == null || record.Card != bulletSizeCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            float bonus = card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-
-            bulletSizeBonus += bonus;
-        }
-    }
-
-    private void RecalculateBulletSpeed()
-    {
-        // 항상 전체 기록에서 다시 계산하여 중복 적용을 막는다.
         bulletSpeedBonus = 0f;
-
-        if (history == null || bulletSpeedCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            if (record == null || record.Card != bulletSpeedCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            float bonus = card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-
-            bulletSpeedBonus += bonus;
-        }
-    }
-
-    private void RecalculateHalo()
-    {
-        // 전체 기록에서 다시 계산하여 중복 적용을 막는다.
         haloBonus = 0f;
+        gaugeBonus = 0f;
+        frenzyDurationBonus = 0f;
+        perfectInvulnerabilityBonus = 0f;
 
-        if (history != null && haloCard != null)
+        RewardCardCatalog catalog = RewardCardCatalog.Instance;
+
+        if (history != null && catalog != null)
         {
             foreach (RewardSelectionRecord record in history.Records)
             {
-                if (record == null || record.Card != haloCard)
-                {
-                    continue;
-                }
-
-                RewardCardData card = record.Card;
-
-                if (card.ShardsPerIncrease < 1)
+                if (record == null
+                    || !catalog.TryGetCard(
+                        record.CardId, out RewardCardData card)
+                    || card.ShardsPerIncrease < 1)
                 {
                     continue;
                 }
@@ -265,109 +126,45 @@ public sealed class PlayerStats : MonoBehaviour
                 int increaseCount =
                     record.InvestedShards / card.ShardsPerIncrease;
 
-                haloBonus += card.BaseEffectAmount
+                float amount = card.BaseEffectAmount
                     + increaseCount * card.AdditionalEffectAmount;
+
+                // 카드 이름이나 ID가 아닌 효과 종류로 처리한다.
+                switch (card.StatEffect)
+                {
+                    case StatEffectType.MoveSpeed:
+                        moveSpeedBonus += amount;
+                        break;
+
+                    case StatEffectType.BulletSize:
+                        bulletSizeBonus += amount;
+                        break;
+
+                    case StatEffectType.BulletSpeed:
+                        bulletSpeedBonus += amount;
+                        break;
+
+                    case StatEffectType.Halo:
+                        haloBonus += amount;
+                        break;
+
+                    case StatEffectType.Gauge:
+                        gaugeBonus += amount;
+                        break;
+
+                    case StatEffectType.FrenzyDuration:
+                        frenzyDurationBonus += amount;
+                        break;
+
+                    case StatEffectType.PerfectInvulnerability:
+                        perfectInvulnerabilityBonus += amount;
+                        break;
+                }
             }
         }
 
-        // 최대 체력 변경에 맞춰 현재 체력 비율을 다시 표시한다.
+        // 모든 계산이 끝난 뒤 현재 체력 비율을 갱신한다.
         haloChanged?.Invoke();
-    }
-
-    private void RecalculateGauge()
-    {
-        // 전체 기록에서 다시 계산하여 중복 적용을 막는다.
-        gaugeBonus = 0f;
-
-        if (history == null || gaugeCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            if (record == null || record.Card != gaugeCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            gaugeBonus += card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-        }
-    }
-
-    private void RecalculateFrenzyDuration()
-    {
-        // 전체 기록에서 다시 계산하여 중복 적용을 막는다.
-        frenzyDurationBonus = 0f;
-
-        if (history == null || frenzyDurationCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            if (record == null || record.Card != frenzyDurationCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            frenzyDurationBonus += card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-        }
-    }
-
-    private void RecalculatePerfectInvulnerability()
-    {
-        // 전체 기록에서 다시 계산하여 중복 적용을 막는다.
-        perfectInvulnerabilityBonus = 0f;
-
-        if (history == null || perfectInvulnerabilityCard == null)
-        {
-            return;
-        }
-
-        foreach (RewardSelectionRecord record in history.Records)
-        {
-            if (record == null || record.Card != perfectInvulnerabilityCard)
-            {
-                continue;
-            }
-
-            RewardCardData card = record.Card;
-
-            if (card.ShardsPerIncrease < 1)
-            {
-                continue;
-            }
-
-            int increaseCount =
-                record.InvestedShards / card.ShardsPerIncrease;
-
-            perfectInvulnerabilityBonus += card.BaseEffectAmount
-                + increaseCount * card.AdditionalEffectAmount;
-        }
     }
 
     private void OnValidate()

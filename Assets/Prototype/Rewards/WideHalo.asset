@@ -11,13 +11,17 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f1d60ff78e534a49b0ef3821cff46d4, type: 3}
   m_Name: WideHalo
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: WideHalo
-  displayName: "넓은 헤일로"
-  description: "헤일로 반경 +10%. 시야와 최대 체력이 증가한다. 빛 조각 1개당 +2% 추가."
+  displayName: "\uB113\uC740 \uD5E4\uC77C\uB85C"
+  description: "\uD5E4\uC77C\uB85C \uBC18\uACBD +10%. \uC2DC\uC57C\uC640 \uCD5C\uB300
+    \uCCB4\uB825\uC774 \uC99D\uAC00\uD55C\uB2E4. \uBE5B \uC870\uAC01 1\uAC1C\uB2F9
+    +2% \uCD94\uAC00."
   tag: 0
+  statEffect: 4
   attackTargets: 0
   baseEffectAmount: 0.1
   additionalEffectAmount: 0.02
   shardsPerIncrease: 1
-  effectDisplayFormat: "헤일로 반경 +{0:0.#%} (시야·최대 체력 증가)"
+  effectDisplayFormat: "\uD5E4\uC77C\uB85C \uBC18\uACBD +{0:0.#%} (\uC2DC\uC57C\xB7\uCD5C\uB300
+    \uCCB4\uB825 \uC99D\uAC00)"

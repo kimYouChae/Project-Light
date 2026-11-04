@@ -67,7 +67,10 @@ public sealed class RewardSelectionController : MonoBehaviour
         RewardCardData card = view.SelectedCard;
         int investedShards = view.InvestmentAmount;
 
-        if (card == null)
+        RewardCardCatalog catalog = RewardCardCatalog.Instance;
+
+        if (card == null || catalog == null
+            || !catalog.TryGetCard(card.Id, out _))
         {
             return;
         }
@@ -80,7 +83,7 @@ public sealed class RewardSelectionController : MonoBehaviour
 
         // 이번 선택을 닫아 중복 확정을 막는다.
         isSelectionOpen = false;
-        history.AddRecord(card, investedShards);
+        history.AddRecord(card.Id, investedShards);
         RestoreTimeScale();
         view.gameObject.SetActive(false);
     }

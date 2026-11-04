@@ -36,12 +36,12 @@ public sealed class RewardSelectionHistory : MonoBehaviour
     }
 
     /// <summary>
-    /// 확정된 획득 기록을 추가합니다.
+    /// 확정된 카드 ID와 투입량을 기록합니다.
     /// RewardSelectionController가 호출합니다.
     /// </summary>
-    public void AddRecord(RewardCardData card, int investedShards)
+    public void AddRecord(string cardId, int investedShards)
     {
-        records.Add(new RewardSelectionRecord(card, investedShards));
+        records.Add(new RewardSelectionRecord(cardId, investedShards));
         changed?.Invoke();
     }
 }
