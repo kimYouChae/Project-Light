@@ -4,6 +4,7 @@ using UnityEngine;
 
 /// <summary>살아 있는 보스에게 일정 간격으로 풀링 기본 공격을 발사한다.</summary>
 [RequireComponent(typeof(PlayerStats))]
+[RequireComponent(typeof(PlayerAttackEvents))]
 public sealed class PlayerAutoAttack : MonoBehaviour
 {
     [Header("===Component===")]
@@ -45,10 +46,14 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private float elapsed;
     private PlayerFrenzy frenzy;
 
+    // 같은 Player에 있는 직접 적중 알림 컴포넌트
+    private PlayerAttackEvents attackEvents;
+
     private void Awake()
     {
         frenzy = GetComponent<PlayerFrenzy>();
         stats = GetComponent<PlayerStats>();
+        attackEvents = GetComponent<PlayerAttackEvents>();
     }
 
     private void OnEnable()
@@ -129,15 +134,41 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void PrepareBullet(PlayerBullet bullet)
     {
         bool enhanced = preparingEnhanced;
-        int shotDamage = enhanced ? stats.Damage * enhancedDamageMultiplier : stats.Damage;
-        float shotRadius = enhanced ? stats.BulletRadius * enhancedSizeMultiplier : stats.BulletRadius;
+        int shotDamage = enhanced
+            ? stats.Damage * enhancedDamageMultiplier
+            : stats.Damage;
+
+        float shotRadius = enhanced
+            ? stats.BulletRadius * enhancedSizeMultiplier
+            : stats.BulletRadius;
+
         float lightMultiplier = enhanced ? enhancedLightMultiplier : 1f;
+
+        // 탄이 실제 발사되는 시점의 공격 구분을 저장한다.
+        AttackTargetType attackType = frenzy != null && frenzy.IsActive
+            ? AttackTargetType.Frenzy
+            : enhanced
+                ? AttackTargetType.Enhanced
+                : AttackTargetType.Normal;
 
         float selectedHeight = arcHeightOptions[
             UnityEngine.Random.Range(0, arcHeightOptions.Length)];
-        bullet.Prepare(firePoint.position, targetBoss, stats.BulletSpeed, selectedHeight,
-            shotRadius, shotDamage, lightMultiplier,
-            playfield.bounds, pool, returnedBullet, sightRadiusMultiplier: stats.BulletSizeMultiplier);
+
+        bullet.Prepare(
+            firePoint.position,
+            targetBoss,
+            stats.BulletSpeed,
+            selectedHeight,
+            shotRadius,
+            shotDamage,
+            lightMultiplier,
+            playfield.bounds,
+            pool,
+            returnedBullet,
+            attackEvents,
+            attackType,
+            sightRadiusMultiplier: stats.BulletSizeMultiplier);
+
         activeBullets.Add(bullet);
     }
 

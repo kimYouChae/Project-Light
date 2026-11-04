@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: "맹독 강타"
   description: "강화 평타 적중 시 독 2중첩을 부여한다. 빛 조각 2개당 +1중첩 추가."
   tag: 1
+  hitEffect: 1
   attackTargets: 6
   baseEffectAmount: 2
   additionalEffectAmount: 1

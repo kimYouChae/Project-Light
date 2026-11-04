@@ -23,6 +23,9 @@ public sealed class RewardCardData : ScriptableObject
     // 카드가 변경하는 스탯. 속성 카드는 None으로 둔다.
     [SerializeField] private StatEffectType statEffect;
 
+    // 직접 적중했을 때 적용할 효과
+    [SerializeField] private HitEffectType hitEffect;
+
     // 효과를 적용할 공격 구분. 여러 항목을 함께 선택할 수 있다.
     [SerializeField] private AttackTargetType attackTargets;
 
@@ -60,6 +63,9 @@ public sealed class RewardCardData : ScriptableObject
 
     /// <summary>카드가 변경하는 스탯을 반환합니다.</summary>
     public StatEffectType StatEffect => statEffect;
+
+    /// <summary>카드의 직접 적중 효과를 반환합니다.</summary>
+    public HitEffectType HitEffect => hitEffect;
 
     /// <summary>
     /// 카드 효과의 적용 대상들을 반환합니다.

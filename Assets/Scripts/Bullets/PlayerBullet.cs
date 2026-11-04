@@ -23,11 +23,27 @@ public sealed class PlayerBullet : MonoBehaviour
     private Action<PlayerBullet> returned;
     private bool prepared;
 
+    // 이 탄의 직접 적중 알림을 전달할 컴포넌트
+    private PlayerAttackEvents attackEvents;
+
+    // 발사 당시의 공격 구분
+    private AttackTargetType attackType;
+
     /// <summary>대여 탄의 위치, 궤적, 피해와 반환 상태를 초기화한다.</summary>
-    public void Prepare(Vector3 start, BossHealth target, float speed, float height,
-        float radius, int hitDamage, float lightMultiplier,
-        Bounds fieldBounds, ComponentPool<PlayerBullet> sourcePool,
-        Action<PlayerBullet> onReturned, float sightRadiusMultiplier = 1f)
+    public void Prepare(
+        Vector3 start,
+        BossHealth target,
+        float speed,
+        float height,
+        float radius,
+        int hitDamage,
+        float lightMultiplier,
+        Bounds fieldBounds,
+        ComponentPool<PlayerBullet> sourcePool,
+        Action<PlayerBullet> onReturned,
+        PlayerAttackEvents sourceEvents,
+        AttackTargetType sourceAttackType,
+        float sightRadiusMultiplier = 1f)
     {
         startPosition = start;
         endPosition = target.transform.position;
@@ -69,6 +85,9 @@ public sealed class PlayerBullet : MonoBehaviour
             attackLight.pointLightOuterRadius = baseLightOuterRadius * sightRadiusMultiplier;
             attackLight.pointLightInnerRadius = baseLightInnerRadius * sightRadiusMultiplier;
         }
+        // 풀 대여마다 이전 발사 정보를 덮어쓴다.
+        attackEvents = sourceEvents;
+        attackType = sourceAttackType;
         prepared = true;
     }
 
@@ -136,11 +155,19 @@ public sealed class PlayerBullet : MonoBehaviour
             + arcDirection * (4f * arcHeight * t * (1f - t));
         if (HitsBoss(previousPosition, transform.position))
         {
-            targetBoss.TryTakePlayerAttackDamage(damage);
+            // 직접 피해가 적용된 경우에만 적중 효과 알림을 보낸다.
+            if (targetBoss.TryTakePlayerAttackDamage(damage)
+                && attackEvents != null)
+            {
+                attackEvents.RaiseHit(targetBoss, attackType);
+            }
+
             ReturnToPool();
         }
         else if (t >= 1f)
+        {
             ReturnToPool();
+        }
     }
 
     private bool HitsBoss(Vector2 from, Vector2 to)
@@ -159,6 +186,9 @@ public sealed class PlayerBullet : MonoBehaviour
         if (!prepared)
             return;
         prepared = false;
+        // 이전 발사의 이벤트 참조와 공격 구분을 제거한다.
+        attackEvents = null;
+        attackType = AttackTargetType.None;
         Action<PlayerBullet> callback = returned;
         returned = null;
         targetBoss = null;

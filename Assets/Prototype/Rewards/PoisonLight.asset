@@ -11,13 +11,18 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f1d60ff78e534a49b0ef3821cff46d4, type: 3}
   m_Name: PoisonLight
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   id: PoisonLight
-  displayName: "독 묻은 빛"
-  description: "평타 적중 시 독 1중첩을 부여한다. 독은 중첩당 지속 피해를 준다. 빛 조각 강화 수치 미정."
+  displayName: "\uB3C5 \uBB3B\uC740 \uBE5B"
+  description: "\uD3C9\uD0C0 \uC801\uC911 \uC2DC \uB3C5 1\uC911\uCCA9\uC744 \uBD80\uC5EC\uD55C\uB2E4.
+    \uB3C5\uC740 \uC911\uCCA9\uB2F9 \uC9C0\uC18D \uD53C\uD574\uB97C \uC900\uB2E4.
+    \uBE5B \uC870\uAC01 \uAC15\uD654 \uC218\uCE58 \uBBF8\uC815."
   tag: 1
+  statEffect: 0
+  hitEffect: 1
   attackTargets: 7
   baseEffectAmount: 1
   additionalEffectAmount: 0 # ##TEMP 빛 조각 강화 수치 미정
   shardsPerIncrease: 1 # ##TEMP 강화 비용 미정, 필드 기본값
-  effectDisplayFormat: "독 {0:0.##}중첩 (빛 조각 강화 수치 미정)"
+  effectDisplayFormat: "\uB3C5 {0:0.##}\uC911\uCCA9 (\uBE5B \uC870\uAC01 \uAC15\uD654
+    \uC218\uCE58 \uBBF8\uC815)"
