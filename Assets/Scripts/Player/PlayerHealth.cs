@@ -45,7 +45,18 @@ public sealed class PlayerHealth : MonoBehaviour
     private void OnEnable()
     {
         if (stats != null)
+        {
+            stats.RegisterHaloChanged(RefreshHealthRatio);
             RefreshHealthRatio();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (stats != null)
+        {
+            stats.UnregisterHaloChanged(RefreshHealthRatio);
+        }
     }
 
     private void RefreshHealthRatio()

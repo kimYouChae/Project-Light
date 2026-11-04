@@ -4744,6 +4744,13 @@ MonoBehaviour:
   baseGaugePerBullet: 10
   baseFrenzyDuration: 6
   basePerfectInvulnerability: 0.25
+  history: {fileID: 2047060554}
+  moveSpeedCard: {fileID: 11400000, guid: 52e2ffa0ae9d4398a2d19d7798f2314a, type: 2}
+  bulletSizeCard: {fileID: 11400000, guid: 2767e3109f184602a409ec079733ec45, type: 2}
+  bulletSpeedCard: {fileID: 11400000, guid: 664a763dd54e48f9ae9a70124a5963ae, type: 2}
+  haloCard: {fileID: 11400000, guid: 4138800df41a4d4ea047989b1a841fc1, type: 2}
+  gaugeCard: {fileID: 11400000, guid: bb28c8781c7048488b3eaf2cd08798d5, type: 2}
+  frenzyDurationCard: {fileID: 11400000, guid: 375c4f47f0dc4819a533477c77629387, type: 2}
 --- !u!114 &2047060554
 MonoBehaviour:
   m_ObjectHideFlags: 0

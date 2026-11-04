@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -10,8 +11,29 @@ public sealed class RewardSelectionHistory : MonoBehaviour
     [SerializeField] private List<RewardSelectionRecord> records =
         new List<RewardSelectionRecord>();
 
+    // 획득 기록이 추가됐을 때 전달할 알림
+    private Action changed;
+
     /// <summary>획득 기록을 읽기 전용으로 제공합니다.</summary>
     public IReadOnlyList<RewardSelectionRecord> Records => records;
+
+    /// <summary>
+    /// 획득 기록 변경 알림을 등록합니다.
+    /// PlayerStats가 호출합니다.
+    /// </summary>
+    public void RegisterChanged(Action callback)
+    {
+        changed += callback;
+    }
+
+    /// <summary>
+    /// 획득 기록 변경 알림을 해제합니다.
+    /// PlayerStats가 호출합니다.
+    /// </summary>
+    public void UnregisterChanged(Action callback)
+    {
+        changed -= callback;
+    }
 
     /// <summary>
     /// 확정된 획득 기록을 추가합니다.
@@ -20,5 +42,6 @@ public sealed class RewardSelectionHistory : MonoBehaviour
     public void AddRecord(RewardCardData card, int investedShards)
     {
         records.Add(new RewardSelectionRecord(card, investedShards));
+        changed?.Invoke();
     }
 }
