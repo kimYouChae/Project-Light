@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>플레이어 탄의 직접 적중 때 확률로 빛 조각을 대여한다.</summary>
 public sealed class LightShardDropper : MonoBehaviour
 {
-    [SerializeField] private BossHealth bossHealth;
+    [SerializeField] private StageBattleController stageBattle;
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private LightShardWallet wallet;
     [SerializeField] private LightShard shardPrefab;
@@ -41,18 +41,49 @@ public sealed class LightShardDropper : MonoBehaviour
     private Action<LightShard> releaseShard;
     private Vector3 spawnPosition;
 
+    // 현재 적중 알림을 받고 있는 보스
+    private BossHealth bossHealth;
+
     private void OnEnable()
     {
+        if (stageBattle != null)
+        {
+            stageBattle.RegisterBattleStarted(OnBattleStarted);
+            BindBoss(stageBattle.CurrentBoss);
+        }
+    }
+
+    private void OnBattleStarted(BossHealth boss)
+    {
+        BindBoss(boss);
+    }
+
+    private void BindBoss(BossHealth boss)
+    {
+        if (bossHealth == boss)
+        {
+            return;
+        }
+
         if (bossHealth != null)
+        {
+            bossHealth.PlayerAttackHit -= OnPlayerAttackHit;
+        }
+
+        bossHealth = boss;
+
+        if (bossHealth != null)
+        {
             bossHealth.PlayerAttackHit += OnPlayerAttackHit;
+        }
     }
 
     private void Start()
     {
-        if (bossHealth == null || playerHealth == null || wallet == null
+        if (stageBattle == null || playerHealth == null || wallet == null
             || shardPrefab == null || shardParent == null || playfield == null)
         {
-            Debug.LogError("빛 조각 드랍의 보스·플레이어·보유량·프리팹·부모·필드 참조를 확인해주세요.", this);
+            Debug.LogError("빛 조각 드랍의 전투 관리자·플레이어·보유량·프리팹·부모·필드 참조를 확인해주세요.", this);
             enabled = false;
             return;
         }
@@ -130,8 +161,12 @@ public sealed class LightShardDropper : MonoBehaviour
 
     private void OnDisable()
     {
-        if (bossHealth != null)
-            bossHealth.PlayerAttackHit -= OnPlayerAttackHit;
+        if (stageBattle != null)
+        {
+            stageBattle.UnregisterBattleStarted(OnBattleStarted);
+        }
+
+        BindBoss(null);
         foreach (LightShard shard in new List<LightShard>(activeShards))
             if (shard != null)
                 shard.ReturnToPool();

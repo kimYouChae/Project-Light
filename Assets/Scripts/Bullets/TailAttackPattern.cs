@@ -5,11 +5,12 @@ using UnityEngine;
 /// <summary>발밑 경고 후 꼬리와 가속 흙 탄을 생성하는 패턴.</summary>
 public sealed class TailAttackPattern : MonoBehaviour
 {
-    [SerializeField] private Transform playerTransform;
-    [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private SpriteRenderer playfield;
-    [SerializeField] private BulletRegistry bulletRegistry;
-    [SerializeField] private Transform objectParent;
+    // 초기화 시 전달받는 씬 참조
+    private Transform playerTransform;
+    private PlayerHealth playerHealth;
+    private SpriteRenderer playfield;
+    private BulletRegistry bulletRegistry;
+    private Transform objectParent;
     [SerializeField] private SpriteRenderer warningPrefab;
     [SerializeField] private TestBullet tailPrefab;
     [SerializeField] private TestBullet dirtPrefab;
@@ -47,6 +48,23 @@ public sealed class TailAttackPattern : MonoBehaviour
     private double patternTime;
     private double nextWarningTime;
     private bool emitting;
+
+    /// <summary>
+    /// 씬의 플레이어·필드·탄 관리자·풀 부모를 연결합니다.
+    /// TailBossPattern.Initialize가 호출합니다.
+    /// </summary>
+    public void Initialize(
+        PlayerHealth player,
+        SpriteRenderer field,
+        BulletRegistry registry,
+        Transform poolParent)
+    {
+        playerHealth = player;
+        playerTransform = player != null ? player.transform : null;
+        playfield = field;
+        bulletRegistry = registry;
+        objectParent = poolParent;
+    }
 
     /// <summary>발밑 꼬리 회수가 모두 끝났는지 반환한다.</summary>
     public bool IsRetreatComplete => activeTails.Count == 0;

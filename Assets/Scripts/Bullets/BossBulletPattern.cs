@@ -6,11 +6,12 @@ using UnityEngine;
 public sealed class BossBulletPattern : MonoBehaviour
 {
     [SerializeField] private TestBullet bulletPrefab;
-    [SerializeField] private Transform playerTransform;
-    [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private SpriteRenderer playfield;
-    [SerializeField] private Transform bulletParent;
-    [SerializeField] private BulletRegistry bulletRegistry;
+    // 초기화 시 전달받는 씬 참조
+    private Transform playerTransform;
+    private PlayerHealth playerHealth;
+    private SpriteRenderer playfield;
+    private Transform bulletParent;
+    private BulletRegistry bulletRegistry;
 
     // ##TEMP 사용자 승인 패턴 시간·발사 간격.
     [SerializeField, Min(0.01f)] private float waveDuration = 5f;
@@ -39,6 +40,23 @@ public sealed class BossBulletPattern : MonoBehaviour
     private readonly List<WaveBurst> waveBursts = new List<WaveBurst>();
     private WaveBurst spawnBurst;
     private bool emitting;
+
+    /// <summary>
+    /// 씬의 플레이어·필드·탄 풀 부모·탄 관리자를 연결합니다.
+    /// TailBossPattern.Initialize가 호출합니다.
+    /// </summary>
+    public void Initialize(
+        PlayerHealth player,
+        SpriteRenderer field,
+        BulletRegistry registry,
+        Transform poolParent)
+    {
+        playerHealth = player;
+        playerTransform = player != null ? player.transform : null;
+        playfield = field;
+        bulletRegistry = registry;
+        bulletParent = poolParent;
+    }
 
     /// <summary>전투 시작부터 새 공격을 생성한다.</summary>
     public void StartEmission() => emitting = true;

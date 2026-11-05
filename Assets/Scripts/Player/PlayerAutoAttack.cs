@@ -10,7 +10,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     [Header("===Component===")]
     [SerializeField] private PlayerStats stats;
     [SerializeField] private PlayerBullet bulletPrefab;
-    [SerializeField] private BossHealth targetBoss;
+    [SerializeField] private StageBattleController stageBattle;
     [SerializeField] private PlayerHealth playerHealth;
     [SerializeField] private SpriteRenderer playfield;
     [SerializeField] private Transform firePoint;
@@ -46,6 +46,9 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private float elapsed;
     private PlayerFrenzy frenzy;
 
+    // 전투 시작 알림으로 전달받는 현재 공격 대상
+    private BossHealth targetBoss;
+
     // 같은 Player에 있는 직접 적중 알림 컴포넌트
     private PlayerAttackEvents attackEvents;
 
@@ -60,6 +63,31 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     {
         if (frenzy != null)
             frenzy.Ended += ResetAttackCycle;
+
+        if (stageBattle != null)
+        {
+            stageBattle.RegisterBattleStarted(OnBattleStarted);
+            stageBattle.RegisterBattleEnded(OnBattleEnded);
+
+            // 이미 전투 중일 때 활성화돼도 현재 대상을 받는다.
+            targetBoss = stageBattle.IsFighting
+                ? stageBattle.CurrentBoss
+                : null;
+        }
+    }
+
+    private void OnBattleStarted(BossHealth boss)
+    {
+        targetBoss = boss;
+    }
+
+    private void OnBattleEnded(BossHealth boss)
+    {
+        if (targetBoss != boss)
+            return;
+
+        targetBoss = null;
+        enhancedShotTimes.Clear();
     }
 
     private void ResetAttackCycle()
@@ -69,10 +97,10 @@ public sealed class PlayerAutoAttack : MonoBehaviour
 
     private void Start()
     {
-        if (bulletPrefab == null || targetBoss == null || firePoint == null
+        if (bulletPrefab == null || stageBattle == null || firePoint == null
             || bulletParent == null || playerHealth == null || playfield == null || stats == null)
         {
-            Debug.LogError("기본 공격의 프리팹, 보스, 발사점, 부모, 체력을 지정해주세요.", this);
+            Debug.LogError("기본 공격의 프리팹, 전투 관리자, 발사점, 부모, 체력을 지정해주세요.", this);
             enabled = false;
             return;
         }
@@ -176,6 +204,13 @@ public sealed class PlayerAutoAttack : MonoBehaviour
 
     private void OnDisable()
     {
+        if (stageBattle != null)
+        {
+            stageBattle.UnregisterBattleStarted(OnBattleStarted);
+            stageBattle.UnregisterBattleEnded(OnBattleEnded);
+        }
+
+        targetBoss = null;
         if (frenzy != null)
             frenzy.Ended -= ResetAttackCycle;
         foreach (PlayerBullet bullet in new List<PlayerBullet>(activeBullets))

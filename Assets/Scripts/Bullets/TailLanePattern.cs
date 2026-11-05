@@ -5,9 +5,10 @@ using UnityEngine;
 /// <summary>랜덤 레인·방향의 꼬리 내려찍기를 경고하고 풀에서 실행한다.</summary>
 public sealed class TailLanePattern : MonoBehaviour
 {
-    [SerializeField] private SpriteRenderer playfield;
-    [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private Transform objectParent;
+    // 초기화 시 전달받는 씬 참조
+    private SpriteRenderer playfield;
+    private PlayerHealth playerHealth;
+    private Transform objectParent;
     [SerializeField] private TailLaneWarning warningPrefab;
     [SerializeField] private TailLaneHazard hazardPrefab;
     // ##TEMP 사용자 승인 프로토타입 수치.
@@ -26,6 +27,20 @@ public sealed class TailLanePattern : MonoBehaviour
     private double patternTime;
     private double nextWarningTime;
     private bool emitting;
+
+    /// <summary>
+    /// 씬의 플레이어·필드·풀 부모를 연결합니다.
+    /// TailBossPattern.Initialize가 호출합니다.
+    /// </summary>
+    public void Initialize(
+        PlayerHealth player,
+        SpriteRenderer field,
+        Transform poolParent)
+    {
+        playerHealth = player;
+        playfield = field;
+        objectParent = poolParent;
+    }
 
     /// <summary>레인 꼬리 회수가 모두 끝났는지 반환한다.</summary>
     public bool IsRetreatComplete => attacks.Count == 0;

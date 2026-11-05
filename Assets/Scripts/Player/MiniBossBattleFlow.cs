@@ -8,14 +8,17 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
     private enum BattleState { Waiting, Fighting, Absorbing, Retreating, Finished, Complete }
 
     [Header("===Component===")]
-    [SerializeField] private BossHealth bossHealth;
-    [SerializeField] private BossBulletPattern bulletPattern;
-    [SerializeField] private TailAttackPattern tailPattern;
-    [SerializeField] private TailLanePattern lanePattern;
+    [SerializeField] private StageBattleController stageBattle;
     [SerializeField] private BulletRegistry bulletRegistry;
 
+    [Header("===패턴 씬 참조===")]
+    [SerializeField] private PlayerHealth playerHealth;
+    [SerializeField] private SpriteRenderer playfield;
+    [SerializeField] private Transform bulletPoolParent;
+    [SerializeField] private Transform tailPoolParent;
+    [SerializeField] private Transform lanePoolParent;
+
     [Header("===Trs===")]
-    [SerializeField] private Transform bossTransform;
     [SerializeField] private Transform retreatPoint;
     [SerializeField] private GameObject completeText;
 
@@ -29,6 +32,11 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
     private readonly List<TestBullet> absorptionBullets = new List<TestBullet>();
     private float stateElapsed;
     private Vector3 retreatStart;
+
+    // 관리자가 생성한 현재 보스의 실행 참조
+    private BossHealth bossHealth;
+    private TailBossPattern bossPattern;
+    private Transform bossTransform;
 
     // COMPLETE 표시까지 끝났을 때 전달할 보상 요청
     private Action rewardRequested;
@@ -50,35 +58,76 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
     private void OnEnable()
     {
-        if (bossHealth != null)
-            bossHealth.Defeated += BeginBattleEnd;
+        if (stageBattle != null)
+            stageBattle.RegisterBattleEnded(OnBattleEnded);
     }
 
     private void Start()
     {
-        if (bossHealth == null || bossTransform == null || retreatPoint == null
-            || bulletPattern == null || tailPattern == null || lanePattern == null
-            || bulletRegistry == null || completeText == null)
+        if (stageBattle == null || retreatPoint == null
+            || bulletRegistry == null || completeText == null
+            || playerHealth == null || playfield == null
+            || bulletPoolParent == null
+            || tailPoolParent == null
+            || lanePoolParent == null)
         {
             Debug.LogError("짤보스 전투 흐름의 필수 참조를 확인해주세요.", this);
             enabled = false;
             return;
         }
+        if (!stageBattle.TryCreateBoss(
+            out BossHealth health,
+            out IBossPattern pattern))
+        {
+            enabled = false;
+            return;
+        }
+
+        bossHealth = health;
+        bossTransform = health.transform;
+        bossPattern = pattern as TailBossPattern;
+
+        if (bossPattern == null || !bossPattern.IsConfigured)
+        {
+            Debug.LogError(
+                "꼬리 보스의 패턴 구성과 참조를 확인해주세요.", this);
+            stageBattle.CancelBattle(bossHealth);
+            enabled = false;
+            return;
+        }
+
+        // 생성된 패턴의 Start에서 풀을 만들기 전에 초기화한다.
+        bossPattern.Initialize(
+            playerHealth,
+            playfield,
+            bulletRegistry,
+            bulletPoolParent,
+            tailPoolParent,
+            lanePoolParent);
+
         StartBattle();
     }
 
-    /// <summary>대기 상태에서 세 패턴을 가동해 전투를 시작한다.</summary>
+    /// <summary>대기 상태에서 현재 대상을 등록하고 세 패턴을 가동한다.</summary>
     public void StartBattle()
     {
-        if (state != BattleState.Waiting)
+        if (state != BattleState.Waiting || stageBattle == null)
+            return;
+        if (!stageBattle.TryStartBattle(bossHealth))
             return;
         completeText.SetActive(false);
         state = BattleState.Fighting;
-        bulletPattern.StartEmission();
-        tailPattern.StartEmission();
-        lanePattern.StartEmission();
+        bossPattern.StartPattern();
+        // 시작 알림 처리 중 체력이 소진된 경우에도 종료 흐름에 진입한다.
         if (bossHealth.IsDefeated)
             BeginBattleEnd();
+    }
+
+    private void OnBattleEnded(BossHealth endedBoss)
+    {
+        if (endedBoss != bossHealth)
+            return;
+        BeginBattleEnd();
     }
 
     private void BeginBattleEnd()
@@ -87,9 +136,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             return;
         state = BattleState.Absorbing;
         stateElapsed = 0f;
-        bulletPattern.StopForBattleEnd();
-        tailPattern.StopForBattleEnd();
-        lanePattern.StopForBattleEnd();
+        bossPattern.StopPattern();
         // 꼬리는 위 종료 처리에서 먼저 판정 목록에서 제외한다.
         absorptionBullets.Clear();
         absorptionBullets.AddRange(bulletRegistry.ActiveBullets);
@@ -117,7 +164,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         foreach (TestBullet bullet in absorptionBullets)
             if (bullet != null)
                 bullet.AdvanceAbsorption(bossTransform.position, progress);
-        if (progress < 1f || !tailPattern.IsRetreatComplete || !lanePattern.IsRetreatComplete)
+        if (progress < 1f || !bossPattern.IsRetreatComplete)
             return;
         absorptionBullets.Clear();
         retreatStart = bossTransform.position;
@@ -145,19 +192,20 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             return;
         completeText.SetActive(false);
         state = BattleState.Finished;
+        // 종료 연출이 끝난 뒤 현재 대상 참조를 해제한다.
+        stageBattle.TryCompleteBattle(bossHealth);
         rewardRequested?.Invoke();
     }
 
     private void OnDisable()
     {
-        if (bossHealth != null)
-            bossHealth.Defeated -= BeginBattleEnd;
-        if (bulletPattern != null)
-            bulletPattern.StopForBattleEnd();
-        if (tailPattern != null)
-            tailPattern.StopForBattleEnd();
-        if (lanePattern != null)
-            lanePattern.StopForBattleEnd();
+        if (stageBattle != null)
+        {
+            stageBattle.UnregisterBattleEnded(OnBattleEnded);
+            stageBattle.CancelBattle(bossHealth);
+        }
+        if (bossPattern != null)
+            bossPattern.StopPattern();
         foreach (TestBullet bullet in absorptionBullets)
             if (bullet != null)
                 bullet.Expire();

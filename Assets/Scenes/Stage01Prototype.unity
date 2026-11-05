@@ -119,97 +119,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &9773313
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 9773314}
-  - component: {fileID: 9773315}
-  m_Layer: 0
-  m_Name: Body_TEMP
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &9773314
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9773313}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 544653530}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &9773315
-SpriteRenderer:
-  serializedVersion: 2
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9773313}
-  m_Enabled: 1
-  m_CastShadows: 0
-  m_ReceiveShadows: 0
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 0
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 0
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 10
-  m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 915f92c824c571a43af50a06ac90b1c5, type: 3}
-  m_Color: {r: 0.65, g: 0.25, b: 0.8, a: 1}
-  m_FlipX: 0
-  m_FlipY: 0
-  m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
-  m_AdaptiveModeThreshold: 0.5
-  m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
-  m_SpriteSortPoint: 0
 --- !u!1 &25122306
 GameObject:
   m_ObjectHideFlags: 0
@@ -422,7 +331,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1c5a0eb6291f1e489a118c681be3326, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossHealthView
-  bossHealth: {fileID: 544653529}
+  stageBattle: {fileID: 773758363}
   battleFlow: {fileID: 204438828}
   barRoot: {fileID: 1522318866}
   healthFill: {fileID: 149165651}
@@ -455,7 +364,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ef674a1afe5cf4f468ceb368a3f977cb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LightShardDropper
-  bossHealth: {fileID: 544653529}
+  stageBattle: {fileID: 773758363}
   playerHealth: {fileID: 2047060545}
   wallet: {fileID: 2047060551}
   shardPrefab: {fileID: 4252266880105510196, guid: b5714b2b8754df84ab378b28f3601242, type: 3}
@@ -702,12 +611,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a32d8fbe8d36be4484e84875e522e80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MiniBossBattleFlow
-  bossHealth: {fileID: 544653529}
-  bulletPattern: {fileID: 1498051992}
-  tailPattern: {fileID: 1047320321}
-  lanePattern: {fileID: 1379720943}
+  stageBattle: {fileID: 773758363}
   bulletRegistry: {fileID: 856490552}
-  bossTransform: {fileID: 544653530}
+  playerHealth: {fileID: 2047060545}
+  playfield: {fileID: 1864379177}
+  bulletPoolParent: {fileID: 955776541}
+  tailPoolParent: {fileID: 1341258202}
+  lanePoolParent: {fileID: 1285855650}
   retreatPoint: {fileID: 25122307}
   completeText: {fileID: 29117635}
   freezeDuration: 0.15
@@ -1546,15 +1456,13 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 34627554}
-  - {fileID: 1379720944}
   - {fileID: 152663201}
   - {fileID: 856490553}
-  - {fileID: 1498051993}
-  - {fileID: 1047320322}
   - {fileID: 204438829}
   - {fileID: 136445384}
   - {fileID: 584004224}
   - {fileID: 148450477}
+  - {fileID: 773758364}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &516690711
@@ -1753,69 +1661,6 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!1 &544653528
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 544653530}
-  - component: {fileID: 544653529}
-  - component: {fileID: 544653531}
-  m_Layer: 0
-  m_Name: Boss_TEMP
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &544653529
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 544653528}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e0cad7a8362098543bd18f12bf2915b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossHealth
-  maxHealth: 100
-  hitRadius: 0.6
-  currentHealth: 0
---- !u!4 &544653530
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 544653528}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 6.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 9773314}
-  m_Father: {fileID: 580882484}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &544653531
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 544653528}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd5dac8583511c646aafc7371a388039, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossPoisonStatus
-  settings: {fileID: 11400000, guid: 90e53d53c166b6646b20d602730751ba, type: 2}
-  currentStacks: 0
 --- !u!1 &580882483
 GameObject:
   m_ObjectHideFlags: 0
@@ -1846,8 +1691,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2047060542}
-  - {fileID: 544653530}
   - {fileID: 25122307}
+  - {fileID: 1694933634}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &584004223
@@ -2063,6 +1908,53 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &773758362
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 773758364}
+  - component: {fileID: 773758363}
+  m_Layer: 0
+  m_Name: StageBattleController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &773758363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773758362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 662866be41d944e46a4dd59c01e4846d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StageBattleController
+  bossPrefab: {fileID: 8153261995339038613, guid: 554fcf3c1f4920b4b94357baa108e95b, type: 3}
+  spawnPoint: {fileID: 1694933634}
+  bossParent: {fileID: 580882484}
+--- !u!4 &773758364
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 773758362}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 3, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 482140100}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &831813815
 GameObject:
@@ -2488,71 +2380,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 265381256}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1047320320
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1047320322}
-  - component: {fileID: 1047320321}
-  m_Layer: 0
-  m_Name: TailAttackPattern
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1047320321
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1047320320}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 66c11f51c8202504b9aad722ae907e0b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TailAttackPattern
-  playerTransform: {fileID: 2047060542}
-  playerHealth: {fileID: 2047060545}
-  playfield: {fileID: 1864379177}
-  bulletRegistry: {fileID: 856490552}
-  objectParent: {fileID: 1341258202}
-  warningPrefab: {fileID: 4298019064532129788, guid: 5dc6ccadbc0db544b9c7d38c0c743b4d, type: 3}
-  tailPrefab: {fileID: 5115659390556018074, guid: 01c1cd079d591254980b93379a279556, type: 3}
-  dirtPrefab: {fileID: 2258949310060110918, guid: 00287d6669e97094ba72fb5af77157e9, type: 3}
-  patternInterval: 10
-  warningDuration: 1
-  tailDuration: 1
-  tailRadius: 0.6
-  tailDamage: 2
-  dirtSlotCount: 12
-  gapSlots: 0000000006000000
-  dirtInitialSpeed: 0.5
-  dirtAcceleration: 1
-  dirtRadius: 0.12
-  initialWarningCount: 2
-  initialTailCount: 2
-  initialDirtCount: 64
---- !u!4 &1047320322
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1047320320}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 482140100}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1066369704
 MonoBehaviour:
@@ -3155,62 +2982,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!1 &1379720942
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1379720944}
-  - component: {fileID: 1379720943}
-  m_Layer: 0
-  m_Name: TailLanePattern
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1379720943
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1379720942}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0103d108af32ac345a7799efaa128c1d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TailLanePattern
-  playfield: {fileID: 1864379177}
-  playerHealth: {fileID: 2047060545}
-  objectParent: {fileID: 1285855650}
-  warningPrefab: {fileID: 8502571467712910018, guid: 0e429dde98bb81149bf7955654488118, type: 3}
-  hazardPrefab: {fileID: 1476612072955824648, guid: 8baea73baeef17b44ab80a14c300177e, type: 3}
-  patternInterval: 30
-  warningDuration: 5
-  holdDuration: 3
-  damage: 2
-  safeEdgeRatio: 0.1
-  travelDuration: 0.2
-  initialCount: 2
---- !u!4 &1379720944
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1379720942}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 482140100}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1400260575
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3679,67 +3450,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2047060542}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1498051991
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1498051993}
-  - component: {fileID: 1498051992}
-  m_Layer: 0
-  m_Name: BossBulletPattern
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1498051992
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1498051991}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 953b4ec59c230c34a83878a0ebb06505, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BossBulletPattern
-  bulletPrefab: {fileID: 3014184059525224061, guid: 4eca56270638fb44a86153dc241fbf42, type: 3}
-  playerTransform: {fileID: 2047060542}
-  playerHealth: {fileID: 2047060545}
-  playfield: {fileID: 1864379177}
-  bulletParent: {fileID: 955776541}
-  bulletRegistry: {fileID: 856490552}
-  waveDuration: 5
-  straightDuration: 10
-  straightFireInterval: 2
-  waveBurstCount: 6
-  waveBulletInterval: 0.15
-  waveBurstInterval: 1.5
-  bulletSpeed: 2
-  waveAmplitude: 0.8
-  wavePeriod: 2
-  bulletRadius: 0.12
-  initialPoolCount: 64
---- !u!4 &1498051993
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1498051991}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 6.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 482140100}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1522318866
 GameObject:
   m_ObjectHideFlags: 0
@@ -4028,6 +3738,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 265381256}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1694933633
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1694933634}
+  m_Layer: 0
+  m_Name: BossSpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1694933634
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1694933633}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 6.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 580882484}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1739276424
 GameObject:
@@ -4703,7 +4444,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAutoAttack
   stats: {fileID: 2047060553}
   bulletPrefab: {fileID: 7963551680392303540, guid: 85546ea9236ce7c4babc9c44c494ee1f, type: 3}
-  targetBoss: {fileID: 544653529}
+  stageBattle: {fileID: 773758363}
   playerHealth: {fileID: 2047060545}
   playfield: {fileID: 1864379177}
   firePoint: {fileID: 1115939539}
