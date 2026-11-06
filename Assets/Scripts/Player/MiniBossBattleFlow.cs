@@ -5,7 +5,7 @@ using UnityEngine;
 /// <summary>짤보스 전투 시작·적탄 흡수·퇴장과 완료 표시를 관리한다.</summary>
 public sealed class MiniBossBattleFlow : MonoBehaviour
 {
-    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, Finished, Complete }
+    private enum BattleState { Waiting, Fighting, Absorbing, Retreating, Finished, Complete, Entering }
 
     [Header("===Component===")]
     [SerializeField] private StageBattleController stageBattle;
@@ -35,7 +35,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
     // 관리자가 생성한 현재 보스의 실행 참조
     private BossHealth bossHealth;
-    private TailBossPattern bossPattern;
+    private IBossPattern bossPattern;
     private Transform bossTransform;
 
     // COMPLETE 표시까지 끝났을 때 전달할 보상 요청
@@ -71,7 +71,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             || tailPoolParent == null
             || lanePoolParent == null)
         {
-            Debug.LogError("짤보스 전투 흐름의 필수 참조를 확인해주세요.", this);
+            Debug.LogError("보스 전투 흐름의 필수 참조를 확인해주세요.", this);
             enabled = false;
             return;
         }
@@ -85,12 +85,12 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
         bossHealth = health;
         bossTransform = health.transform;
-        bossPattern = pattern as TailBossPattern;
+        bossPattern = pattern;
 
         if (bossPattern == null || !bossPattern.IsConfigured)
         {
             Debug.LogError(
-                "꼬리 보스의 패턴 구성과 참조를 확인해주세요.", this);
+                "보스 패턴의 필수 컴포넌트 연결을 확인해주세요.", this);
             stageBattle.CancelBattle(bossHealth);
             enabled = false;
             return;
@@ -105,17 +105,25 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             tailPoolParent,
             lanePoolParent);
 
-        StartBattle();
+        completeText.SetActive(false);
+        state = BattleState.Entering;
+        bossPattern.BeginEntrance();
+
+        // 별도 등장 이동이 없는 보스는 즉시 전투를 시작한다.
+        if (bossPattern.IsEntranceComplete)
+        {
+            StartBattle();
+        }
     }
 
-    /// <summary>대기 상태에서 현재 대상을 등록하고 세 패턴을 가동한다.</summary>
+    /// <summary>등장 완료 후 현재 보스를 등록하고 패턴을 시작합니다.</summary>
     public void StartBattle()
     {
-        if (state != BattleState.Waiting || stageBattle == null)
+        if (state != BattleState.Entering || stageBattle == null
+            || bossPattern == null || !bossPattern.IsEntranceComplete)
             return;
         if (!stageBattle.TryStartBattle(bossHealth))
             return;
-        completeText.SetActive(false);
         state = BattleState.Fighting;
         bossPattern.StartPattern();
         // 시작 알림 처리 중 체력이 소진된 경우에도 종료 흐름에 진입한다.
@@ -147,7 +155,14 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
     private void Update()
     {
-        if (state == BattleState.Absorbing)
+        if (state == BattleState.Entering)
+        {
+            if (bossPattern != null && bossPattern.IsEntranceComplete)
+            {
+                StartBattle();
+            }
+        }
+        else if (state == BattleState.Absorbing)
             UpdateAbsorption(Time.deltaTime);
         else if (state == BattleState.Retreating)
             UpdateRetreat(Time.deltaTime);

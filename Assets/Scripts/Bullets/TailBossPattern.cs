@@ -13,6 +13,14 @@ public sealed class TailBossPattern : MonoBehaviour, IBossPattern
         && tailPattern != null
         && lanePattern != null;
 
+    /// <summary>꼬리 보스는 현재 별도 등장 이동 없이 시작합니다.</summary>
+    public bool IsEntranceComplete => true;
+
+    /// <summary>현재 꼬리 보스에는 별도 등장 이동이 없습니다.</summary>
+    public void BeginEntrance()
+    {
+    }
+
     /// <summary>발밑 꼬리와 레인 꼬리의 회수가 끝났는지 반환합니다.</summary>
     public bool IsRetreatComplete =>
         IsConfigured
@@ -21,7 +29,7 @@ public sealed class TailBossPattern : MonoBehaviour, IBossPattern
 
     /// <summary>
     /// 세 패턴에 실행에 필요한 씬 참조를 전달합니다.
-    /// 현재는 MiniBossBattleFlow.Awake가 호출합니다.
+    /// MiniBossBattleFlow.Start가 인터페이스를 통해 호출합니다.
     /// </summary>
     public void Initialize(
         PlayerHealth player,

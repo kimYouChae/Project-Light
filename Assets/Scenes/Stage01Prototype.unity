@@ -1938,7 +1938,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 662866be41d944e46a4dd59c01e4846d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageBattleController
-  bossPrefab: {fileID: 8153261995339038613, guid: 554fcf3c1f4920b4b94357baa108e95b, type: 3}
+  bossPrefab: {fileID: 7691327090667390876, guid: 9f83c9c7d9a2cae4494b4558bebc31db, type: 3}
   spawnPoint: {fileID: 1694933634}
   bossParent: {fileID: 580882484}
 --- !u!4 &773758364
