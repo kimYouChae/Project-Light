@@ -50,6 +50,9 @@ public sealed class HeadBossFanPattern : MonoBehaviour
     /// <summary>현재 부채꼴 발사 구간이 진행 중인지 반환합니다.</summary>
     public bool IsEmitting => emitting;
 
+    /// <summary>발사가 끝나고 발사된 부채꼴 탄이 모두 반환됐는지 나타냅니다.</summary>
+    public bool IsFinished => !IsEmitting && activeBullets.Count == 0;
+
     /// <summary>
     /// 실행에 필요한 씬 참조를 전달합니다.
     /// 이후 머리 보스 전투 초기화에서 호출합니다.

@@ -1,50 +1,38 @@
 using UnityEngine;
 
-/// <summary>머리 보스의 등장과 현재 구현된 패턴 순서를 관리합니다.</summary>
+/// <summary>머리 보스의 등장과 패턴 실행을 관리합니다.</summary>
 public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
 {
+    [SerializeField] private HeadBossEntrance entrance;
+    [SerializeField] private HeadBossFanPattern fanPattern;
+    [SerializeField] private HeadBossFreezePattern freezePattern;
+    [SerializeField] private HeadBossSearchlightPattern searchlightPattern;
+    [SerializeField] private HeadBossDashPattern dashPattern;
+
     private enum PatternState
     {
         Idle,
         Fan,
-        Waiting,
-        WallApproach,
-        Warning,
-        Detecting,
+        Searchlight,
         Finished
     }
 
-    [SerializeField] private HeadBossEntrance entrance;
-    [SerializeField] private HeadBossFanPattern fanPattern;
-    [SerializeField] private HeadBossWallPattern wallPattern;
-    [SerializeField] private HeadBossFreezeWarning freezeWarning;
-    [SerializeField] private HeadBossFreezePattern freezePattern;
-
-    // ##TEMP 승인한 패턴 사이 대기 시간.
-    [SerializeField, Min(0f)] private float patternWaitDuration = 1f;
-
+    private PlayerHealth player;
     private PatternState state;
-    private float waitElapsed;
 
     /// <summary>머리 보스의 필수 컴포넌트 연결 상태입니다.</summary>
     public bool IsConfigured =>
-        entrance != null
-        && fanPattern != null
-        && wallPattern != null
-        && freezeWarning != null
-        && freezePattern != null;
+        entrance != null && fanPattern != null
+        && freezePattern != null && searchlightPattern != null;
 
     /// <summary>머리 보스의 등장 완료 상태입니다.</summary>
     public bool IsEntranceComplete =>
         entrance != null && entrance.IsComplete;
 
-    /// <summary>
-    /// 현재 종료 시 벽은 즉시 반환합니다.
-    /// 발사한 탄의 흡수는 Flow가 처리합니다.
-    /// </summary>
+    /// <summary>별도 회수를 기다릴 위험 영역이 없습니다.</summary>
     public bool IsRetreatComplete => true;
 
-    /// <summary>Flow가 전달한 씬 참조로 각 패턴을 초기화합니다.</summary>
+    /// <summary>Flow가 전달한 씬 참조로 패턴을 초기화합니다.</summary>
     public void Initialize(
         PlayerHealth player,
         SpriteRenderer field,
@@ -58,33 +46,25 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
             return;
         }
 
-        fanPattern.Initialize(
-            player,
-            field,
-            registry,
-            bulletPoolParent);
-
-        wallPattern.Initialize(player, field, bulletPoolParent);
-
-        freezePattern.Initialize(
-            player,
-            field,
-            registry,
-            bulletPoolParent);
+        this.player = player;
+        fanPattern.Initialize(player, field, registry, bulletPoolParent);
+        freezePattern.Initialize(player, field, registry, bulletPoolParent);
+        if (dashPattern != null)
+        {
+            dashPattern.Initialize(field);
+        }
     }
 
     /// <summary>Flow의 요청으로 머리 등장을 시작합니다.</summary>
     public void BeginEntrance()
     {
-        if (!IsConfigured)
+        if (IsConfigured)
         {
-            return;
+            entrance.BeginEntrance();
         }
-
-        entrance.BeginEntrance();
     }
 
-    /// <summary>Flow의 요청으로 부채꼴부터 패턴 실행을 시작합니다.</summary>
+    /// <summary>Flow의 요청으로 부채꼴부터 패턴을 한 번 시작합니다.</summary>
     public void StartPattern()
     {
         if (!IsConfigured || state != PatternState.Idle)
@@ -98,87 +78,41 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
 
     private void Update()
     {
-        if (Time.timeScale <= 0f)
+        if (Time.deltaTime <= 0f)
         {
             return;
         }
 
-        switch (state)
+        if (state == PatternState.Fan && fanPattern.IsFinished
+            && player != null && !player.IsDead)
         {
-            case PatternState.Fan:
-                if (!fanPattern.IsEmitting)
-                {
-                    waitElapsed = 0f;
-                    state = PatternState.Waiting;
-                }
-                break;
-
-            case PatternState.Waiting:
-                waitElapsed += Time.deltaTime;
-
-                if (waitElapsed >= patternWaitDuration)
-                {
-                    wallPattern.BeginWalls();
-                    state = PatternState.WallApproach;
-                }
-                break;
-
-            case PatternState.WallApproach:
-                if (wallPattern.IsApproachComplete)
-                {
-                    freezeWarning.BeginWarning();
-                    state = PatternState.Warning;
-                }
-                break;
-
-            case PatternState.Warning:
-                if (freezeWarning.IsComplete)
-                {
-                    freezePattern.BeginDetection();
-                    state = PatternState.Detecting;
-                }
-                break;
-
-            case PatternState.Detecting:
-                if (freezePattern.IsComplete)
-                {
-                    // 이번 연결은 감지 구간까지 한 번 실행한 뒤 대기한다.
-                    state = PatternState.Finished;
-                }
-                break;
+            state = PatternState.Searchlight;
+            searchlightPattern.BeginTracking(player.transform);
+        }
+        else if (state == PatternState.Searchlight && !searchlightPattern.IsRunning)
+        {
+            state = PatternState.Finished;
         }
     }
 
-    /// <summary>Flow의 요청으로 패턴 진행과 새 발사를 중단합니다.</summary>
+    /// <summary>Flow의 요청으로 부채꼴과 서치라이트를 중단합니다.</summary>
     public void StopPattern()
     {
-        // 다음 단계가 시작되지 않도록 진행 상태를 먼저 정리한다.
         state = PatternState.Idle;
-        waitElapsed = 0f;
 
         if (fanPattern != null)
         {
             fanPattern.StopForBattleEnd();
         }
 
-        if (wallPattern != null)
+        if (searchlightPattern != null)
         {
-            wallPattern.ClearWalls();
+            searchlightPattern.StopTracking();
         }
 
-        if (freezeWarning != null)
+        if (dashPattern != null)
         {
-            freezeWarning.StopWarning();
+            dashPattern.StopDash();
         }
-
-        if (freezePattern != null)
-        {
-            freezePattern.StopDetection();
-        }
-    }
-
-    private void OnValidate()
-    {
-        patternWaitDuration = Mathf.Max(0f, patternWaitDuration);
     }
 }

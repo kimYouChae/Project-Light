@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -27,8 +28,10 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
     private PlayerHealth playerHealth;
     private PlayerLight playerLight;
+    private PlayerMovement playerMovement;
     private PlayerFrenzy frenzy;
     private float nextInputTime;
+    private Func<bool> tryDashPerfect;
 
     /// <summary>현재 충전된 퍼펙트 게이지.</summary>
     public float CurrentGauge => frenzy != null && frenzy.IsActive
@@ -40,10 +43,26 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
     /// <summary>PERFECT 판정선 안팎의 추가 허용 폭.</summary>
     public float PerfectTolerance => perfectTolerance;
 
+    /// <summary>현재 돌진의 패링 판정을 스페이스 입력에 연결합니다.</summary>
+    public void RegisterDashPerfect(Func<bool> tryPerfect)
+    {
+        tryDashPerfect = tryPerfect;
+    }
+
+    /// <summary>같은 돌진이 등록한 패링 판정을 해제합니다.</summary>
+    public void UnregisterDashPerfect(Func<bool> tryPerfect)
+    {
+        if (tryDashPerfect == tryPerfect)
+        {
+            tryDashPerfect = null;
+        }
+    }
+
     private void Awake()
     {
         playerHealth = GetComponent<PlayerHealth>();
         playerLight = GetComponent<PlayerLight>();
+        playerMovement = GetComponent<PlayerMovement>();
         frenzy = GetComponent<PlayerFrenzy>();
         stats = GetComponent<PlayerStats>();
         currentGauge = 0f;
@@ -68,7 +87,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         if (!isActiveAndEnabled || playerHealth.IsDead || bulletRegistry == null || Time.time < nextInputTime)
             return;
 
-        int count = 0;
+        int count = tryDashPerfect?.Invoke() == true ? 1 : 0;
         // 입력 프레임에만 전체 목록을 순회한다. 충전 상한을 넘어도 모두 처리 표시한다.
         foreach (TestBullet bullet in bulletRegistry.ActiveBullets)
         {
@@ -88,6 +107,13 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         }
 
         playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
+
+        // 굳기 중 퍼펙트는 폭주 보상을 지급하지 않는다.
+        if (playerMovement != null && playerMovement.IsFrozen)
+        {
+            return;
+        }
+
         int bonusCount = Mathf.Min(count, simultaneousBonusLimit);
         if (frenzy.IsActive)
         {

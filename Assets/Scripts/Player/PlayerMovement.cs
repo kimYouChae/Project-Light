@@ -11,15 +11,26 @@ public sealed class PlayerMovement : MonoBehaviour
     [SerializeField, Min(0f)] private float bodyRadius = 0.25f;
     [SerializeField] private SpriteRenderer playfield;
 
+    private bool isFrozen;
+
     /// <summary>이동 경계와 몸체 피격 판정에 사용하는 월드 반경.</summary>
     public float BodyRadius => bodyRadius;
+
+    /// <summary>굳기로 이동이 잠겨 있는지 나타냅니다.</summary>
+    public bool IsFrozen => isFrozen;
+
+    /// <summary>굳기 상태에 따라 WASD 이동을 잠그거나 풉니다.</summary>
+    public void SetFrozen(bool frozen)
+    {
+        isFrozen = frozen;
+    }
 
     private void Awake() => stats = GetComponent<PlayerStats>();
 
     private void Update()
     {
-        // 필드 시간이 정지된 동안 이동·공격·판정·획득을 처리하지 않는다.
-        if (Time.timeScale <= 0f)
+        // 시간 정지 또는 굳기 중에는 이동 입력을 처리하지 않는다.
+        if (Time.timeScale <= 0f || isFrozen)
         {
             return;
         }

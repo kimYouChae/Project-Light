@@ -1,61 +1,64 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>정지 안전 통로와 이동 감지 조준탄을 관리합니다.</summary>
+/// <summary>서치라이트 안의 이동을 감지하고 굳기 부채꼴을 발사합니다.</summary>
 public sealed class HeadBossFreezePattern : MonoBehaviour
 {
     [SerializeField] private Transform firePoint;
     [SerializeField] private TestBullet bulletPrefab;
 
-    // ##TEMP 플레이어 중심에서 좌우 통로 탄 중심까지의 거리.
-    [SerializeField, Min(0f)] private float laneDistance = 1.2f;
-
-    // ##TEMP 승인한 감지·발사 시작값.
+    // ##TEMP 승인한 감지 시작값.
     [SerializeField, Min(0.01f)] private float duration = 2f;
     [SerializeField, Min(0f)] private float movementThreshold = 0.05f;
-    // ##TEMP 통로 탄 발사 간격.
-    [SerializeField, Min(0.01f)] private float laneFireInterval = 0.5f;
+    // ##TEMP 이동 거리 비교에 사용하는 시간 구간.
+    [SerializeField, Min(0.01f)] private float movementSampleWindow = 0.1f;
 
-    // ##TEMP 이동 감지 조준탄 발사 간격.
-    [SerializeField, Min(0.01f)] private float aimedFireInterval = 0.2f;
-    [SerializeField, Min(0f)] private float bulletSpeed = 2f;
+    private const int FREEZE_BULLET_COUNT = 3;
+
+    // ##TEMP 미끼 궤도와 가운데 탄의 프로토타입 시작값.
+    [SerializeField, Min(0.01f)] private float decoyClearance = 0.1f;
+    [SerializeField, Range(0.01f, 0.49f)] private float centerArrivalDelay = 0.15f;
+    [SerializeField, Min(0.01f)] private float centerBulletSpeed = 4f;
     [SerializeField, Min(0.01f)] private float bulletRadius = 0.12f;
-    [SerializeField, Min(1)] private int initialPoolCount = 64;
 
     private PlayerHealth playerHealth;
+    private PlayerMovement playerMovement;
+    private PlayerLight playerLight;
+    private PlayerPerfectDodge perfectDodge;
     private SpriteRenderer playfield;
     private BulletRegistry bulletRegistry;
     private Transform bulletParent;
-
-    private readonly HashSet<TestBullet> activeBullets =
-        new HashSet<TestBullet>();
-
     private ComponentPool<TestBullet> pool;
-    private Action<TestBullet> prepareBullet;
-    private Action<TestBullet> releaseBullet;
 
-    private Vector3 safePosition;
-    private float laneOffset;
-    private float laneStartY;
+    private readonly HashSet<TestBullet> activeVolleyBullets = new HashSet<TestBullet>();
 
-    private double elapsed;
-    private double nextLaneTime;
-    private double nextAimTime;
+    private bool isVolleyRunning;
+
+    private Vector2 detectionCenter;
+    private float detectionRadiusSquared;
+    private double detectionStartedAt;
+
+    private readonly Queue<(double Time, Vector2 Position)> movementSamples =
+        new Queue<(double Time, Vector2 Position)>();
+
+    private (double Time, Vector2 Position) previousMovementSample;
 
     private bool isDetecting;
-    private bool wasDetected;
+    // 감지 한 번에 굳기를 한 번만 발동한다.
+    private bool hasTriggeredFreeze;
     private bool isComplete;
-
-    // 대여 직전에 설정하는 발사 정보
-    private Vector3 shotPosition;
-    private Vector2 shotDirection;
 
     /// <summary>감지 구간이 정상 종료됐는지 반환합니다.</summary>
     public bool IsComplete => isComplete;
 
+    /// <summary>이동 감지 구간이 진행 중인지 나타냅니다.</summary>
+    public bool IsDetecting => isDetecting;
+
+    /// <summary>이번 감지에서 플레이어 이동을 잠갔는지 나타냅니다.</summary>
+    public bool HasTriggeredFreeze => hasTriggeredFreeze;
+
     /// <summary>
-    /// 씬 참조를 연결합니다.
+    /// 이동 감지와 굳기 탄 발사에 필요한 씬 참조를 연결합니다.
     /// HeadBossPattern.Initialize가 호출합니다.
     /// </summary>
     public void Initialize(
@@ -65,29 +68,26 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         Transform poolParent)
     {
         playerHealth = player;
+        playerMovement = player != null ? player.GetComponent<PlayerMovement>() : null;
+        playerLight = player != null ? player.GetComponent<PlayerLight>() : null;
+        perfectDodge = player != null ? player.GetComponent<PlayerPerfectDodge>() : null;
         playfield = field;
         bulletRegistry = registry;
         bulletParent = poolParent;
     }
 
-    /// <summary>
-    /// 현재 위치를 안전 위치로 저장하고 감지를 시작합니다.
-    /// 이후 예고 완료 시 패턴 제어부가 호출합니다.
-    /// </summary>
-    public void BeginDetection()
+    /// <summary>포착된 서치라이트 원을 기준으로 이동 감지를 시작합니다.</summary>
+    public void BeginDetection(Vector2 center, float radius)
     {
         if (!isActiveAndEnabled || isDetecting)
         {
             return;
         }
 
-        if (firePoint == null || bulletPrefab == null
-            || playerHealth == null
-            || playfield == null || bulletRegistry == null
-            || bulletParent == null)
+        if (playerHealth == null || playerMovement == null)
         {
             Debug.LogError(
-                "얼어붙기 공격의 발사점·탄·씬 참조를 확인해주세요.",
+                "서치라이트 이동 감지의 플레이어와 이동 컴포넌트를 확인해주세요.",
                 this);
             return;
         }
@@ -97,39 +97,16 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
             return;
         }
 
-        if (pool == null)
-        {
-            try
-            {
-                prepareBullet = PrepareBullet;
-                releaseBullet = ReleaseBullet;
+        detectionCenter = center;
+        detectionRadiusSquared = radius * radius;
+        detectionStartedAt = Time.timeAsDouble;
 
-                pool = new ComponentPool<TestBullet>(
-                    new TestBulletFactory(bulletPrefab, bulletParent),
-                    initialPoolCount,
-                    bulletParent);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception, this);
-                return;
-            }
-        }
+        movementSamples.Clear();
+        previousMovementSample = (0d, (Vector2)playerHealth.transform.position);
 
-        safePosition = playerHealth.transform.position;
-
-        // 안전 위치에서 직접 설정한 좌우 거리를 사용한다.
-        laneOffset = laneDistance;
-        laneStartY = playfield.bounds.max.y - bulletRadius;
-
-        elapsed = 0d;
-        nextLaneTime = laneFireInterval;
-        nextAimTime = 0d;
-        wasDetected = false;
+        hasTriggeredFreeze = false;
         isComplete = false;
         isDetecting = true;
-
-        FireLaneBullet();
     }
 
     private void Update()
@@ -145,109 +122,164 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
             return;
         }
 
-        elapsed += Time.deltaTime;
-
-        // 통로 탄은 감지 구간 동안 일정 간격으로 내려보낸다.
-        while (nextLaneTime < duration && nextLaneTime <= elapsed)
+        if (isVolleyRunning)
         {
-            FireLaneBullet();
-            nextLaneTime += laneFireInterval;
+            if (activeVolleyBullets.Count == 0)
+            {
+                StopDetection();
+                isComplete = true;
+            }
+
+            return;
         }
 
+        double elapsed = Time.timeAsDouble - detectionStartedAt;
         if (elapsed >= duration)
         {
-            isDetecting = false;
+            StopDetection();
             isComplete = true;
             return;
         }
 
-        Vector2 movement =
-            playerHealth.transform.position - safePosition;
-
-        bool detected =
-            movement.sqrMagnitude > movementThreshold * movementThreshold;
-
-        if (!detected)
+        if (hasTriggeredFreeze)
         {
-            // 안전 위치로 돌아오면 조준탄 발사를 중단한다.
-            wasDetected = false;
             return;
         }
 
-        if (!wasDetected)
+        Vector2 playerPosition = playerHealth.transform.position;
+        bool hasMoved = HasMovedWithinWindow(elapsed, playerPosition);
+        bool isInsideCircle =
+            (playerPosition - detectionCenter).sqrMagnitude <= detectionRadiusSquared;
+
+        if (!isInsideCircle || !hasMoved)
         {
-            // 처음 감지되거나 다시 벗어난 순간에는 즉시 한 발 발사한다.
-            nextAimTime = elapsed;
+            return;
         }
 
-        wasDetected = true;
-
-        while (nextAimTime < duration && nextAimTime <= elapsed)
-        {
-            FireAimedBullet();
-            nextAimTime += aimedFireInterval;
-        }
+        hasTriggeredFreeze = true;
+        movementSamples.Clear();
+        playerMovement.SetFrozen(true);
+        TryStartVolley();
     }
 
-    private void FireLaneBullet()
+    private void TryStartVolley()
     {
-        // 발사할 때마다 좌우 중 한쪽을 같은 확률로 선택한다.
-        float side = UnityEngine.Random.Range(0, 2) == 0 ? -1f : 1f;
-
-        shotDirection = Vector2.down;
-        shotPosition = new Vector3(
-            safePosition.x + laneOffset * side,
-            laneStartY,
-            playfield.bounds.center.z);
-
-        pool.Rent(prepareBullet);
-    }
-
-    private void FireAimedBullet()
-    {
-        shotPosition = firePoint.position;
-        shotDirection =
-            playerHealth.transform.position - shotPosition;
-
-        if (shotDirection.sqrMagnitude <= Mathf.Epsilon)
+        if (firePoint == null || bulletPrefab == null || playerLight == null || perfectDodge == null
+            || playfield == null || bulletRegistry == null || bulletParent == null)
         {
-            shotDirection = Vector2.down;
+            Debug.LogError("굳기 부채꼴의 발사점·탄·씬 참조를 확인해주세요.", this);
+            return;
         }
 
-        pool.Rent(prepareBullet);
+        Vector3 origin = firePoint.position;
+        Vector2 toPlayer = (Vector2)playerHealth.transform.position - (Vector2)origin;
+        float distance = toPlayer.magnitude;
+        float outerPerfectRadius =
+            playerLight.CoreRadius + bulletRadius + perfectDodge.PerfectTolerance;
+        float decoyDistance = outerPerfectRadius + decoyClearance;
+        float haloRadius = playerLight.HaloRadius;
+
+        float centerEntryTime = (distance - outerPerfectRadius) / centerBulletSpeed;
+        float decoyClosestTime = centerEntryTime - centerArrivalDelay;
+
+        // 미끼 궤도나 도착 순서를 확보할 수 없으면 발사를 생략한다.
+        if (distance <= decoyDistance || decoyDistance >= haloRadius
+            || decoyClosestTime <= 0f)
+        {
+            return;
+        }
+
+        Vector2 forward = toPlayer / distance;
+        Vector2 sideways = new Vector2(-forward.y, forward.x);
+
+        float sideRatio = decoyDistance / distance;
+        float forwardRatio = Mathf.Sqrt(1f - sideRatio * sideRatio);
+        float decoyClosestTravel = distance * forwardRatio;
+        float decoySpeed = decoyClosestTravel / decoyClosestTime;
+
+        // 미끼는 최근접 지점을 지나 헤일로 바깥까지 진행한다.
+        float haloExitRadius = haloRadius + bulletRadius;
+        float travelPastClosest = Mathf.Sqrt(
+            haloExitRadius * haloExitRadius - decoyDistance * decoyDistance);
+        float decoyLifetime = (decoyClosestTravel + travelPastClosest) / decoySpeed;
+
+        if (pool == null)
+        {
+            pool = new ComponentPool<TestBullet>(
+                new TestBulletFactory(bulletPrefab, bulletParent),
+                FREEZE_BULLET_COUNT,
+                bulletParent);
+        }
+
+        isVolleyRunning = true;
+        FireFreezeBullet(origin, forward * forwardRatio - sideways * sideRatio,
+            decoySpeed, decoyLifetime);
+        FireFreezeBullet(origin, forward, centerBulletSpeed, distance / centerBulletSpeed);
+        FireFreezeBullet(origin, forward * forwardRatio + sideways * sideRatio,
+            decoySpeed, decoyLifetime);
     }
 
-    private void PrepareBullet(TestBullet bullet)
+    private void FireFreezeBullet(
+        Vector3 origin, Vector2 direction, float speed, float lifetime)
     {
-        bullet.Prepare(
-            shotPosition,
-            shotDirection,
-            bulletSpeed,
-            float.PositiveInfinity,
-            bulletRadius,
-            playfield.bounds,
-            pool,
-            releaseBullet,
-            playerHealth,
-            bulletRegistry);
+        TestBullet bullet = pool.Rent(instance => instance.Prepare(
+            origin, direction, speed, lifetime, bulletRadius,
+            playfield.bounds, pool, ReturnVolleyBullet,
+            playerHealth, bulletRegistry, hitOnce: true));
 
-        activeBullets.Add(bullet);
+        activeVolleyBullets.Add(bullet);
     }
 
-    private void ReleaseBullet(TestBullet bullet)
+    private void ReturnVolleyBullet(TestBullet bullet)
     {
-        activeBullets.Remove(bullet);
+        activeVolleyBullets.Remove(bullet);
         pool.Return(bullet);
     }
 
+    private bool HasMovedWithinWindow(double elapsed, Vector2 position)
+    {
+        if (elapsed > 0d)
+        {
+            movementSamples.Enqueue((elapsed, position));
+        }
+
+        double comparisonTime = elapsed - movementSampleWindow;
+        if (comparisonTime < 0d)
+        {
+            return false;
+        }
+
+        // 비교 시각 앞뒤의 위치를 보간해 프레임 간격이 달라도 같은 시간 차이를 사용한다.
+        while (movementSamples.TryPeek(out var sample) && sample.Time <= comparisonTime)
+        {
+            previousMovementSample = movementSamples.Dequeue();
+        }
+
+        var nextSample = movementSamples.Peek();
+        float blend = (float)((comparisonTime - previousMovementSample.Time)
+            / (nextSample.Time - previousMovementSample.Time));
+        Vector2 comparisonPosition =
+            Vector2.Lerp(previousMovementSample.Position, nextSample.Position, blend);
+
+        return (position - comparisonPosition).sqrMagnitude
+            > movementThreshold * movementThreshold;
+    }
+
     /// <summary>
-    /// 감지와 새 발사를 중단합니다. 이미 발사한 탄은 유지합니다.
-    /// HeadBossPattern.StopPattern과 비활성 처리에서 호출합니다.
+    /// 이동 감지를 중단하고 이 패턴이 건 이동 잠금을 풉니다.
+    /// HeadBossSearchlightPattern.StopTracking과 비활성 처리에서 호출합니다.
     /// </summary>
     public void StopDetection()
     {
+        if (hasTriggeredFreeze && playerMovement != null)
+        {
+            playerMovement.SetFrozen(false);
+        }
+
+        movementSamples.Clear();
+        isVolleyRunning = false;
         isDetecting = false;
-        wasDetected = false;
+        hasTriggeredFreeze = false;
         isComplete = false;
     }
 
@@ -255,7 +287,8 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     {
         StopDetection();
 
-        foreach (TestBullet bullet in new List<TestBullet>(activeBullets))
+        // 종료 연출에 넘기지 못한 탄은 컴포넌트 비활성화 때 회수한다.
+        foreach (TestBullet bullet in new List<TestBullet>(activeVolleyBullets))
         {
             if (bullet != null)
             {
@@ -263,7 +296,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
             }
         }
 
-        activeBullets.Clear();
+        activeVolleyBullets.Clear();
     }
 
     private void OnDestroy()
@@ -273,13 +306,12 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
 
     private void OnValidate()
     {
-        laneDistance = Mathf.Max(0f, laneDistance);
         duration = Mathf.Max(0.01f, duration);
         movementThreshold = Mathf.Max(0f, movementThreshold);
-        laneFireInterval = Mathf.Max(0.01f, laneFireInterval);
-        aimedFireInterval = Mathf.Max(0.01f, aimedFireInterval);
-        bulletSpeed = Mathf.Max(0f, bulletSpeed);
+        movementSampleWindow = Mathf.Max(0.01f, movementSampleWindow);
+        decoyClearance = Mathf.Max(0.01f, decoyClearance);
+        centerArrivalDelay = Mathf.Clamp(centerArrivalDelay, 0.01f, 0.49f);
+        centerBulletSpeed = Mathf.Max(0.01f, centerBulletSpeed);
         bulletRadius = Mathf.Max(0.01f, bulletRadius);
-        initialPoolCount = Mathf.Max(1, initialPoolCount);
     }
 }
