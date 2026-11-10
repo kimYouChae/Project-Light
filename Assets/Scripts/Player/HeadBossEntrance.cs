@@ -18,11 +18,15 @@ public sealed class HeadBossEntrance : MonoBehaviour
     private float elapsed;
     private bool isEntering;
     private bool isComplete;
+    private bool isReentering;
 
     private Action entranceCompleted;
 
     /// <summary>등장 이동이 완료됐는지 반환합니다.</summary>
     public bool IsComplete => isComplete;
+
+    /// <summary>화면 위에서 다시 들어오는 이동이 완료됐는지 반환합니다.</summary>
+    public bool IsReentryComplete { get; private set; }
 
     /// <summary>등장 완료 알림을 등록합니다.</summary>
     public void RegisterEntranceCompleted(Action callback)
@@ -47,9 +51,38 @@ public sealed class HeadBossEntrance : MonoBehaviour
             return;
         }
 
+        StartEntranceMove();
+    }
+
+    /// <summary>화면 위에서 시작하는 복귀 이동을 시작합니다.</summary>
+    public void BeginReentry()
+    {
+        if (isEntering)
+        {
+            return;
+        }
+
+        IsReentryComplete = false;
+        isReentering = true;
+        StartEntranceMove();
+    }
+
+    /// <summary>진행 중인 복귀 이동과 복귀 완료 상태를 정리합니다.</summary>
+    public void CancelReentry()
+    {
+        if (isReentering)
+        {
+            isEntering = false;
+            isReentering = false;
+        }
+
+        IsReentryComplete = false;
+    }
+
+    private void StartEntranceMove()
+    {
         transform.position = startPosition;
         elapsed = 0f;
-        isComplete = false;
         isEntering = true;
     }
 
@@ -75,6 +108,14 @@ public sealed class HeadBossEntrance : MonoBehaviour
 
         // 완료 상태를 먼저 설정해 알림을 한 번만 실행한다.
         isEntering = false;
+
+        if (isReentering)
+        {
+            isReentering = false;
+            IsReentryComplete = true;
+            return;
+        }
+
         isComplete = true;
         entranceCompleted?.Invoke();
     }

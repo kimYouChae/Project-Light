@@ -3,17 +3,24 @@ using UnityEngine;
 /// <summary>고정 방향 돌진과 플레이어 접촉 및 패링을 처리합니다.</summary>
 public sealed class HeadBossDashPattern : MonoBehaviour
 {
+    [SerializeField] private HeadBossBitePattern bitePattern;
+    [SerializeField] private HeadBossEntrance entrance;
+    [SerializeField] private SpriteRenderer body;
+
     // ##TEMP 돌진 프로토타입 시작값.
     [SerializeField, Min(0.01f)] private float dashSpeed = 12f;
     [SerializeField, Min(0.01f)] private float contactRadius = 0.6f;
 
     private SpriteRenderer playfield;
+    private Camera fieldCamera;
     private PlayerHealth target;
     private PlayerLight playerLight;
     private PlayerPerfectDodge perfectDodge;
     private Vector2 previousPlayerPosition;
     private Vector3 dashEnd;
+    private Vector2 dashDirection;
     private bool isDashing;
+    private bool isExiting;
     private bool wasParried;
 
     /// <summary>이번 돌진이 플레이어 접촉으로 끝났는지 나타냅니다.</summary>
@@ -23,12 +30,13 @@ public sealed class HeadBossDashPattern : MonoBehaviour
     public void Initialize(SpriteRenderer field)
     {
         playfield = field;
+        fieldCamera = Camera.main;
     }
 
     /// <summary>저장된 조준 방향으로 돌진하고 대상의 패링 입력에 등록합니다.</summary>
     public void BeginDash(PlayerHealth player, Vector2 direction)
     {
-        if (!isActiveAndEnabled || isDashing || playfield == null
+        if (!isActiveAndEnabled || isDashing || isExiting || playfield == null || entrance == null
             || player == null || player.IsDead || direction.sqrMagnitude <= 0f)
         {
             return;
@@ -38,7 +46,9 @@ public sealed class HeadBossDashPattern : MonoBehaviour
         playerLight = player.GetComponent<PlayerLight>();
         perfectDodge = player.GetComponent<PlayerPerfectDodge>();
         previousPlayerPosition = player.transform.position;
-        dashEnd = FindDashEnd(direction.normalized);
+        dashDirection = direction.normalized;
+        dashEnd = FindDashEnd(dashDirection);
+        entrance.CancelReentry();
         DidBite = false;
         wasParried = false;
         isDashing = true;
@@ -51,10 +61,28 @@ public sealed class HeadBossDashPattern : MonoBehaviour
 
     private Vector3 FindDashEnd(Vector2 direction)
     {
-        // 몸체가 필드 경계를 완전히 지나갈 때까지 돌진한다.
+        // 필드와 카메라 화면을 모두 지난 위치를 계산한다.
         Bounds bounds = playfield.bounds;
-        bounds.Expand(contactRadius * 2f);
         Vector3 start = transform.position;
+        if (fieldCamera != null)
+        {
+            float depth = fieldCamera.WorldToViewportPoint(start).z;
+            bounds.Encapsulate(fieldCamera.ViewportToWorldPoint(new Vector3(0f, 0f, depth)));
+            bounds.Encapsulate(fieldCamera.ViewportToWorldPoint(new Vector3(0f, 1f, depth)));
+            bounds.Encapsulate(fieldCamera.ViewportToWorldPoint(new Vector3(1f, 0f, depth)));
+            bounds.Encapsulate(fieldCamera.ViewportToWorldPoint(new Vector3(1f, 1f, depth)));
+        }
+
+        Vector3 margin = Vector3.one * contactRadius;
+        if (body != null)
+        {
+            Bounds bodyBounds = body.bounds;
+            Vector3 offset = bodyBounds.center - start;
+            margin.x = Mathf.Max(margin.x, bodyBounds.extents.x + Mathf.Abs(offset.x));
+            margin.y = Mathf.Max(margin.y, bodyBounds.extents.y + Mathf.Abs(offset.y));
+        }
+
+        bounds.Expand(margin * 2f);
         float exitX = float.PositiveInfinity;
         float exitY = float.PositiveInfinity;
 
@@ -76,7 +104,18 @@ public sealed class HeadBossDashPattern : MonoBehaviour
 
     private void Update()
     {
-        if (!isDashing || Time.deltaTime <= 0f)
+        if (Time.deltaTime <= 0f)
+        {
+            return;
+        }
+
+        if (isExiting)
+        {
+            UpdateExit();
+            return;
+        }
+
+        if (!isDashing)
         {
             return;
         }
@@ -99,8 +138,17 @@ public sealed class HeadBossDashPattern : MonoBehaviour
             out float contactProgress))
         {
             transform.position = Vector3.Lerp(start, end, contactProgress);
-            StopDash();
-            DidBite = true;
+            PlayerHealth bittenPlayer = target;
+            ClearDashInput();
+
+            DidBite = bitePattern != null
+                && bitePattern.BeginHold(bittenPlayer, dashDirection, BeginExit);
+
+            if (!DidBite)
+            {
+                BeginExit();
+            }
+
             return;
         }
 
@@ -109,8 +157,33 @@ public sealed class HeadBossDashPattern : MonoBehaviour
 
         if (end.Equals(dashEnd))
         {
-            StopDash();
+            BeginReturn();
         }
+    }
+
+    private void BeginExit()
+    {
+        // 들어 올리기로 머리 위치가 바뀌었으므로 현재 위치에서 다시 계산한다.
+        dashEnd = FindDashEnd(dashDirection);
+        isExiting = true;
+    }
+
+    private void UpdateExit()
+    {
+        transform.position = Vector3.MoveTowards(
+            transform.position, dashEnd, dashSpeed * Time.deltaTime);
+
+        if (transform.position.Equals(dashEnd))
+        {
+            BeginReturn();
+        }
+    }
+
+    private void BeginReturn()
+    {
+        ClearDashInput();
+        isExiting = false;
+        entrance.BeginReentry();
     }
 
     private bool TryGetContactProgress(
@@ -152,8 +225,25 @@ public sealed class HeadBossDashPattern : MonoBehaviour
         return true;
     }
 
-    /// <summary>돌진을 중단하고 등록한 패링 입력을 해제합니다.</summary>
+    /// <summary>돌진·물림·이탈·복귀를 중단하고 패링 입력을 해제합니다.</summary>
     public void StopDash()
+    {
+        if (bitePattern != null)
+        {
+            bitePattern.ReleaseHold();
+        }
+
+        if (entrance != null)
+        {
+            entrance.CancelReentry();
+        }
+
+        isExiting = false;
+        DidBite = false;
+        ClearDashInput();
+    }
+
+    private void ClearDashInput()
     {
         if (perfectDodge != null)
         {
@@ -162,7 +252,6 @@ public sealed class HeadBossDashPattern : MonoBehaviour
 
         isDashing = false;
         wasParried = false;
-        DidBite = false;
         target = null;
         playerLight = null;
         perfectDodge = null;

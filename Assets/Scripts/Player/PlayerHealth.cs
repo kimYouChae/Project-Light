@@ -31,6 +31,9 @@ public sealed class PlayerHealth : MonoBehaviour
     /// <summary>몸체 피격 판정에 사용하는 월드 반경.</summary>
     public float BodyRadius => playerMovement.BodyRadius;
 
+    /// <summary>현재 물림으로 입에 고정되어 있는지 나타냅니다.</summary>
+    public bool IsHeldByBite => playerMovement != null && playerMovement.IsHeldByBite;
+
     private void Awake()
     {
         playerMovement = GetComponent<PlayerMovement>();
@@ -77,17 +80,37 @@ public sealed class PlayerHealth : MonoBehaviour
         if (damage <= 0 || !isActiveAndEnabled || isDead || Time.time < invulnerableUntil)
             return false;
 
+        ApplyHit(damage, grantsInvulnerability: true);
+        return true;
+    }
+
+    /// <summary>물림 회차 실패로 헤일로 한 칸을 잃습니다.</summary>
+    public void ApplyBiteShakeDamage()
+    {
+        if (!isActiveAndEnabled || isDead || !IsHeldByBite)
+        {
+            return;
+        }
+
+        ApplyHit(1, grantsInvulnerability: false);
+    }
+
+    private void ApplyHit(int damage, bool grantsInvulnerability)
+    {
         if (currentHealth == 0)
         {
             isDead = true;
             playerMovement.enabled = false;
-            return true;
+            return;
         }
 
         currentHealth = Mathf.Max(0, currentHealth - damage);
-        invulnerableUntil = Time.time + hitInvulnerabilityDuration;
+        if (grantsInvulnerability)
+        {
+            invulnerableUntil = Time.time + hitInvulnerabilityDuration;
+        }
+
         RefreshHealthRatio();
-        return true;
     }
 
     /// <summary>남은 무적을 단축하지 않고 지정 시간만큼 무적을 부여한다.</summary>

@@ -8,13 +8,17 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
     [SerializeField] private HeadBossFreezePattern freezePattern;
     [SerializeField] private HeadBossSearchlightPattern searchlightPattern;
     [SerializeField] private HeadBossDashPattern dashPattern;
+    [SerializeField] private HeadBossAimPattern aimPattern;
+
+    // ##TEMP 마지막 부채꼴 발사 후 돌진 조준까지의 대기 시간.
+    [SerializeField, Min(0f)] private float fanEndDelay = 1f;
 
     private enum PatternState
     {
         Idle,
-        Fan,
+        AimDashAndReturn,
         Searchlight,
-        Finished
+        Fan
     }
 
     private PlayerHealth player;
@@ -23,7 +27,8 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
     /// <summary>머리 보스의 필수 컴포넌트 연결 상태입니다.</summary>
     public bool IsConfigured =>
         entrance != null && fanPattern != null
-        && freezePattern != null && searchlightPattern != null;
+        && freezePattern != null && searchlightPattern != null
+        && dashPattern != null && aimPattern != null;
 
     /// <summary>머리 보스의 등장 완료 상태입니다.</summary>
     public bool IsEntranceComplete =>
@@ -49,10 +54,7 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
         this.player = player;
         fanPattern.Initialize(player, field, registry, bulletPoolParent);
         freezePattern.Initialize(player, field, registry, bulletPoolParent);
-        if (dashPattern != null)
-        {
-            dashPattern.Initialize(field);
-        }
+        dashPattern.Initialize(field);
     }
 
     /// <summary>Flow의 요청으로 머리 등장을 시작합니다.</summary>
@@ -64,38 +66,52 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
         }
     }
 
-    /// <summary>Flow의 요청으로 부채꼴부터 패턴을 한 번 시작합니다.</summary>
+    /// <summary>Flow의 요청으로 조준 돌진부터 패턴 반복을 시작합니다.</summary>
     public void StartPattern()
     {
-        if (!IsConfigured || state != PatternState.Idle)
+        if (!IsConfigured || state != PatternState.Idle
+            || player == null || player.IsDead)
         {
             return;
         }
 
-        state = PatternState.Fan;
-        fanPattern.StartEmission();
+        BeginAim();
+    }
+
+    private void BeginAim()
+    {
+        entrance.CancelReentry();
+        state = PatternState.AimDashAndReturn;
+        aimPattern.BeginTracking(player.transform);
     }
 
     private void Update()
     {
-        if (Time.deltaTime <= 0f)
+        if (Time.deltaTime <= 0f || player == null || player.IsDead)
         {
             return;
         }
 
-        if (state == PatternState.Fan && fanPattern.IsFinished
-            && player != null && !player.IsDead)
+        switch (state)
         {
-            state = PatternState.Searchlight;
-            searchlightPattern.BeginTracking(player.transform);
-        }
-        else if (state == PatternState.Searchlight && !searchlightPattern.IsRunning)
-        {
-            state = PatternState.Finished;
+            case PatternState.AimDashAndReturn when entrance.IsReentryComplete:
+                state = PatternState.Searchlight;
+                searchlightPattern.BeginTracking(player.transform);
+                break;
+
+            case PatternState.Searchlight when !searchlightPattern.IsRunning:
+                state = PatternState.Fan;
+                fanPattern.StartEmission();
+                break;
+
+            case PatternState.Fan when fanPattern.HasFinishedFiringAfter(fanEndDelay):
+                fanPattern.StopForBattleEnd();
+                BeginAim();
+                break;
         }
     }
 
-    /// <summary>Flow의 요청으로 부채꼴과 서치라이트를 중단합니다.</summary>
+    /// <summary>Flow의 요청으로 머리 보스의 패턴 반복을 중단합니다.</summary>
     public void StopPattern()
     {
         state = PatternState.Idle;
@@ -108,6 +124,11 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
         if (searchlightPattern != null)
         {
             searchlightPattern.StopTracking();
+        }
+
+        if (aimPattern != null)
+        {
+            aimPattern.StopTracking();
         }
 
         if (dashPattern != null)

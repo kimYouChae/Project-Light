@@ -15,11 +15,16 @@ public sealed class PlayerFrenzy : MonoBehaviour
     private float remainingTime;
     private float extendedTime;
     private float activeDuration;
+    private PlayerMovement playerMovement;
 
     /// <summary>폭주 종료 알림. 구독자는 비활성화 시 해제한다.</summary>
     public event Action Ended;
 
-    private void Awake() => stats = GetComponent<PlayerStats>();
+    private void Awake()
+    {
+        stats = GetComponent<PlayerStats>();
+        playerMovement = GetComponent<PlayerMovement>();
+    }
 
     /// <summary>현재 폭주 중인지 여부.</summary>
     public bool IsActive => remainingTime > 0f;
@@ -51,7 +56,7 @@ public sealed class PlayerFrenzy : MonoBehaviour
 
     private void Update()
     {
-        if (!IsActive)
+        if (!IsActive || (playerMovement != null && playerMovement.IsHeldByBite))
             return;
         remainingTime = Mathf.Max(0f, remainingTime - Time.deltaTime);
         if (!IsActive)

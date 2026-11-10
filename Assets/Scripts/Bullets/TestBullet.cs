@@ -160,8 +160,15 @@ public sealed class TestBullet : MonoBehaviour
         if (ending || perfectProcessed || (hitOnce && hitApplied) || hitTarget == null || hitTarget.IsDead)
             return false;
 
-        // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.
         Vector2 targetPosition = hitTarget.transform.position;
+        if (hitTarget.IsHeldByBite)
+        {
+            // 물림 중 위치를 갱신해 해제 후 이전 위치부터 다시 검사하지 않는다.
+            previousTargetPosition = targetPosition;
+            return false;
+        }
+
+        // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.
         Vector2 start = previousPosition - previousTargetPosition;
         Vector2 end = currentPosition - targetPosition;
         previousTargetPosition = targetPosition;

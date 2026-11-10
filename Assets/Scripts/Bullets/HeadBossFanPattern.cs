@@ -39,6 +39,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
     private bool emitting;
     private double elapsed;
     private double nextShotTime;
+    private double lastShotAt = double.NegativeInfinity;
 
     // 다음 발사의 틈 방향. 첫 발사는 왼쪽이다.
     private bool gapOnLeft;
@@ -52,6 +53,14 @@ public sealed class HeadBossFanPattern : MonoBehaviour
 
     /// <summary>발사가 끝나고 발사된 부채꼴 탄이 모두 반환됐는지 나타냅니다.</summary>
     public bool IsFinished => !IsEmitting && activeBullets.Count == 0;
+
+    /// <summary>마지막 부채꼴 발사 후 지정 시간이 지났는지 반환합니다.</summary>
+    public bool HasFinishedFiringAfter(float delay)
+    {
+        return !double.IsNegativeInfinity(lastShotAt)
+            && nextShotTime >= duration
+            && Time.timeAsDouble - lastShotAt >= delay;
+    }
 
     /// <summary>
     /// 실행에 필요한 씬 참조를 전달합니다.
@@ -79,6 +88,8 @@ public sealed class HeadBossFanPattern : MonoBehaviour
         {
             return;
         }
+
+        lastShotAt = double.NegativeInfinity;
 
         if (firePoint == null || bulletPrefab == null
             || playerHealth == null || playfield == null
@@ -204,6 +215,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
         }
 
         gapOnLeft = !gapOnLeft;
+        lastShotAt = Time.timeAsDouble;
     }
 
     private void PrepareBullet(TestBullet bullet)

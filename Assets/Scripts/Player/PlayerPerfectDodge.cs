@@ -32,6 +32,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
     private PlayerFrenzy frenzy;
     private float nextInputTime;
     private Func<bool> tryDashPerfect;
+    private Action biteBraceInput;
 
     /// <summary>현재 충전된 퍼펙트 게이지.</summary>
     public float CurrentGauge => frenzy != null && frenzy.IsActive
@@ -58,6 +59,21 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         }
     }
 
+    /// <summary>물림 중 스페이스 입력을 흔들기 판정에 연결합니다.</summary>
+    public void RegisterBiteBraceInput(Action input)
+    {
+        biteBraceInput = input;
+    }
+
+    /// <summary>같은 물림이 등록한 흔들기 입력을 해제합니다.</summary>
+    public void UnregisterBiteBraceInput(Action input)
+    {
+        if (biteBraceInput == input)
+        {
+            biteBraceInput = null;
+        }
+    }
+
     private void Awake()
     {
         playerHealth = GetComponent<PlayerHealth>();
@@ -78,8 +94,18 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         }
 
         Keyboard keyboard = Keyboard.current;
-        if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
-            TryPerfectDodge();
+        if (keyboard == null || !keyboard.spaceKey.wasPressedThisFrame)
+        {
+            return;
+        }
+
+        if (playerMovement != null && playerMovement.IsHeldByBite)
+        {
+            biteBraceInput?.Invoke();
+            return;
+        }
+
+        TryPerfectDodge();
     }
 
     private void TryPerfectDodge()

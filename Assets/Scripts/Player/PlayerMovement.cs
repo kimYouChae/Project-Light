@@ -19,6 +19,15 @@ public sealed class PlayerMovement : MonoBehaviour
     /// <summary>굳기로 이동이 잠겨 있는지 나타냅니다.</summary>
     public bool IsFrozen => isFrozen;
 
+    /// <summary>보스에게 물려 이동이 잠겼는지 나타냅니다.</summary>
+    public bool IsHeldByBite { get; private set; }
+
+    /// <summary>물림에 따른 이동 잠금을 설정하거나 해제합니다.</summary>
+    public void SetBiteHeld(bool held)
+    {
+        IsHeldByBite = held;
+    }
+
     /// <summary>굳기 상태에 따라 WASD 이동을 잠그거나 풉니다.</summary>
     public void SetFrozen(bool frozen)
     {
@@ -29,8 +38,8 @@ public sealed class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-        // 시간 정지 또는 굳기 중에는 이동 입력을 처리하지 않는다.
-        if (Time.timeScale <= 0f || isFrozen)
+        // 시간 정지, 굳기 또는 물림 중에는 이동 입력을 처리하지 않는다.
+        if (Time.timeScale <= 0f || isFrozen || IsHeldByBite)
         {
             return;
         }
@@ -55,13 +64,23 @@ public sealed class PlayerMovement : MonoBehaviour
         position.x += offset.x;
         position.y += offset.y;
 
-        // 표시용 바닥의 월드 경계에서 몸체가 벗어나지 않게 제한한다.
+        transform.position = ClampToPlayfield(position);
+    }
+
+    /// <summary>플레이어 몸체가 필드 안에 들어오도록 월드 위치를 제한합니다.</summary>
+    public Vector3 ClampToPlayfield(Vector3 position)
+    {
+        if (playfield == null)
+        {
+            return position;
+        }
+
         Bounds bounds = playfield.bounds;
         float insetX = Mathf.Min(bodyRadius, bounds.extents.x);
         float insetY = Mathf.Min(bodyRadius, bounds.extents.y);
         position.x = Mathf.Clamp(position.x, bounds.min.x + insetX, bounds.max.x - insetX);
         position.y = Mathf.Clamp(position.y, bounds.min.y + insetY, bounds.max.y - insetY);
-        transform.position = position;
+        return position;
     }
 
     private void OnValidate()
