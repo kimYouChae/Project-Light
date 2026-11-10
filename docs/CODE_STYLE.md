@@ -37,7 +37,8 @@
 ### 주석
 - 처리 단계와 필드 용도는 한글 // 주석
 - 외부에서 쓰는 public API는 XML summary 주석
-- 디버그 로그는 주석 처리해서 남기지 말고, 임시로 둘 경우 // ##TEMP 표시
+- 공통 로그 함수 호출은 코드에 계속 남겨도 된다. 프로젝트 로그는 공통 로그 함수를 사용한다.
+- 직접 `Debug.Log` 호출은 임시 디버깅에만 사용하며 `// ##TEMP`를 표시한다. 디버그 로그를 주석 처리해서 남기지 않는다.
 
 ### OHO에서 따라 하지 않을 것
 - 해제 API 없이 이벤트만 등록하는 구조 (`Localization/LocalizationManager.cs`의 `RegisterChangeLanguage`)

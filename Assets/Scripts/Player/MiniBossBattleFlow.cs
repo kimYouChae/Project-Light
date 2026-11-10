@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System;
 using UnityEngine;
 
@@ -71,7 +71,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
             || tailPoolParent == null
             || lanePoolParent == null)
         {
-            Debug.LogError("보스 전투 흐름의 필수 참조를 확인해주세요.", this);
+            PlayLog.Write("System", "보스 전투 흐름의 필수 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -89,8 +89,8 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
         if (bossPattern == null || !bossPattern.IsConfigured)
         {
-            Debug.LogError(
-                "보스 패턴의 필수 컴포넌트 연결을 확인해주세요.", this);
+            PlayLog.Write("System",
+                "보스 패턴의 필수 컴포넌트 연결을 확인해주세요.", LogType.Error, this);
             stageBattle.CancelBattle(bossHealth);
             enabled = false;
             return;
@@ -107,6 +107,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
 
         completeText.SetActive(false);
         state = BattleState.Entering;
+        PlayLog.Write("Stage", $"Boss Entrance Start ({bossHealth.name})");
         bossPattern.BeginEntrance();
 
         // 별도 등장 이동이 없는 보스는 즉시 전투를 시작한다.
@@ -148,6 +149,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         // 꼬리는 위 종료 처리에서 먼저 판정 목록에서 제외한다.
         absorptionBullets.Clear();
         absorptionBullets.AddRange(bulletRegistry.ActiveBullets);
+        PlayLog.Write("Stage", $"Bullet Absorption Start ({absorptionBullets.Count} bullets)");
         foreach (TestBullet bullet in absorptionBullets)
             if (bullet != null)
                 bullet.FreezeForEnding();
@@ -185,6 +187,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         retreatStart = bossTransform.position;
         stateElapsed = 0f;
         state = BattleState.Retreating;
+        PlayLog.Write("Stage", $"Boss Retreat Start ({bossHealth.name})");
     }
 
     private void UpdateRetreat(float deltaTime)
@@ -198,6 +201,7 @@ public sealed class MiniBossBattleFlow : MonoBehaviour
         state = BattleState.Complete;
         stateElapsed = 0f;
         completeText.SetActive(true);
+        PlayLog.Write("Stage", $"Boss Retreat Complete ({bossHealth.name})");
     }
 
     private void UpdateComplete(float deltaTime)

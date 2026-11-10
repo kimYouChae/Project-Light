@@ -101,6 +101,7 @@ public sealed class PlayerHealth : MonoBehaviour
         {
             isDead = true;
             playerMovement.enabled = false;
+            PlayLog.Write("Player", "Hit (fatal, health=0)");
             return;
         }
 
@@ -111,6 +112,7 @@ public sealed class PlayerHealth : MonoBehaviour
         }
 
         RefreshHealthRatio();
+        PlayLog.Write("Player", $"Hit (damage={damage}, health={currentHealth})");
     }
 
     /// <summary>남은 무적을 단축하지 않고 지정 시간만큼 무적을 부여한다.</summary>

@@ -71,6 +71,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         onLanded = landed;
 
         heldMovement.SetBiteHeld(true);
+        PlayLog.Write("HeadBoss", "Bite Start");
         perfectDodge.RegisterBiteBraceInput(TryBrace);
         PlaceAtMouth();
         return true;
@@ -134,6 +135,8 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         if (elapsed >= shakeInterval)
         {
             transform.position = raisedPosition;
+            PlayLog.Write("HeadBoss",
+                $"Bite Shake {completedShakes + 1}/{SHAKE_COUNT} {(braced ? "Success" : "Failed")}");
 
             if (!braced)
             {
@@ -221,6 +224,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
 
         throwElapsed = 0f;
         isThrowing = true;
+        PlayLog.Write("HeadBoss", "Bite Throw");
         perfectDodge.UnregisterBiteBraceInput(TryBrace);
     }
 
@@ -238,6 +242,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         {
             heldPlayer.transform.position = throwEnd;
             heldPlayer.GrantInvulnerability(landingInvulnerability);
+            PlayLog.Write("HeadBoss", $"Bite Landing (invulnerability={landingInvulnerability:F3}s)");
             isThrowing = false;
 
             Action landed = onLanded;

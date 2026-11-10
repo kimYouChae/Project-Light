@@ -115,6 +115,7 @@ public sealed class RewardSelectionView : MonoBehaviour
         {
             selectedCard = displayedCards[index];
             investmentAmount = 0;
+            PlayLog.Write("Reward", $"Card Selected (card={selectedCard.Id})");
         }
 
         // 선택한 카드의 테두리만 표시한다.

@@ -28,7 +28,7 @@ public sealed class BossPoisonStatus : MonoBehaviour
 
         if (settings == null)
         {
-            Debug.LogError("독 규칙 에셋을 연결해주세요.", this);
+            PlayLog.Write("System", "독 규칙 에셋을 연결해주세요.", LogType.Error, this);
             enabled = false;
         }
     }

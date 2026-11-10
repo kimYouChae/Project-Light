@@ -38,7 +38,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
     {
         if (bulletPrefab == null || target == null || playfield == null || bulletParent == null || bulletRegistry == null)
         {
-            Debug.LogError("테스트 발사기의 프리팹·타겟·필드·탄 부모·탄 관리자 참조를 확인해주세요.", this);
+            PlayLog.Write("System", "테스트 발사기의 프리팹·타겟·필드·탄 부모·탄 관리자 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -53,7 +53,7 @@ public sealed class TestBulletEmitter : MonoBehaviour
         }
         catch (Exception exception)
         {
-            Debug.LogException(exception, this);
+            PlayLog.Write("System", exception.ToString(), LogType.Exception, this);
             enabled = false;
         }
     }

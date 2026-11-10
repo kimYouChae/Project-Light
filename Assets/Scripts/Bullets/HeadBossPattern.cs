@@ -82,6 +82,7 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
     {
         entrance.CancelReentry();
         state = PatternState.AimDashAndReturn;
+        PlayLog.Write("HeadBoss", "Aim Dash Pattern Start");
         aimPattern.BeginTracking(player.transform);
     }
 
@@ -95,16 +96,21 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
         switch (state)
         {
             case PatternState.AimDashAndReturn when entrance.IsReentryComplete:
+                PlayLog.Write("HeadBoss", "Aim Dash Pattern End (returned)");
                 state = PatternState.Searchlight;
+                PlayLog.Write("HeadBoss", "Searchlight Pattern Start");
                 searchlightPattern.BeginTracking(player.transform);
                 break;
 
             case PatternState.Searchlight when !searchlightPattern.IsRunning:
+                PlayLog.Write("HeadBoss", "Searchlight Pattern End");
                 state = PatternState.Fan;
+                PlayLog.Write("HeadBoss", "Fan Pattern Start");
                 fanPattern.StartEmission();
                 break;
 
             case PatternState.Fan when fanPattern.HasFinishedFiringAfter(fanEndDelay):
+                PlayLog.Write("HeadBoss", $"Fan Pattern End (delay={fanEndDelay:F3}s)");
                 fanPattern.StopForBattleEnd();
                 BeginAim();
                 break;
@@ -114,6 +120,11 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
     /// <summary>Flow의 요청으로 머리 보스의 패턴 반복을 중단합니다.</summary>
     public void StopPattern()
     {
+        if (state != PatternState.Idle)
+        {
+            PlayLog.Write("HeadBoss", $"Pattern Stop (phase={state})");
+        }
+
         state = PatternState.Idle;
 
         if (fanPattern != null)

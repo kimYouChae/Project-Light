@@ -46,11 +46,24 @@ public sealed class TailLanePattern : MonoBehaviour
     public bool IsRetreatComplete => attacks.Count == 0;
 
     /// <summary>전투 시작부터 새 레인 경고와 공격을 생성한다.</summary>
-    public void StartEmission() => emitting = true;
+    public void StartEmission()
+    {
+        if (!emitting)
+        {
+            PlayLog.Write("TailBoss", "Lane Pattern Start");
+        }
+
+        emitting = true;
+    }
 
     /// <summary>경고를 취소하고 이미 나온 꼬리만 피해 없이 회수한다.</summary>
     public void StopForBattleEnd()
     {
+        if (emitting)
+        {
+            PlayLog.Write("TailBoss", "Lane Pattern End");
+        }
+
         emitting = false;
         for (int i = attacks.Count - 1; i >= 0; i--)
         {
@@ -84,7 +97,7 @@ public sealed class TailLanePattern : MonoBehaviour
         if (playfield == null || playerHealth == null || objectParent == null
             || warningPrefab == null || hazardPrefab == null)
         {
-            Debug.LogError("레인 꼬리 패턴 참조를 확인해주세요.", this);
+            PlayLog.Write("TailBoss", "레인 꼬리 패턴 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -100,7 +113,7 @@ public sealed class TailLanePattern : MonoBehaviour
         {
             warningPool?.Clear();
             hazardPool?.Clear();
-            Debug.LogException(exception, this);
+            PlayLog.Write("TailBoss", exception.ToString(), LogType.Exception, this);
             enabled = false;
         }
     }
@@ -152,6 +165,7 @@ public sealed class TailLanePattern : MonoBehaviour
                 attack.warning.HideAttackWarning();
                 attack.hazard = hazardPool.Rent(hazard => hazard.Prepare(attack.field, attack.area,
                     attack.fromTop, attack.holdTime, attack.travelTime, attack.damage, playerHealth));
+                PlayLog.Write("TailBoss", "Lane Strike");
             }
             attack.hazard.Advance(age);
         }
@@ -174,6 +188,7 @@ public sealed class TailLanePattern : MonoBehaviour
             warning = warning, field = field, area = area, fromTop = fromTop, startTime = startTime,
             warningTime = warningDuration, holdTime = holdDuration, travelTime = travelDuration, damage = damage
         });
+        PlayLog.Write("TailBoss", $"Lane Warning Start (lane={laneIndex + 1})");
     }
 
     private void ReturnAttack(Attack attack)

@@ -59,11 +59,24 @@ public sealed class BossBulletPattern : MonoBehaviour
     }
 
     /// <summary>전투 시작부터 새 공격을 생성한다.</summary>
-    public void StartEmission() => emitting = true;
+    public void StartEmission()
+    {
+        if (!emitting)
+        {
+            PlayLog.Write("TailBoss", "Bullet Pattern Start");
+        }
+
+        emitting = true;
+    }
 
     /// <summary>이미 발사한 탄은 유지하고 새 공격과 예약 발사를 중단한다.</summary>
     public void StopForBattleEnd()
     {
+        if (emitting)
+        {
+            PlayLog.Write("TailBoss", "Bullet Pattern End");
+        }
+
         emitting = false;
         waveBursts.Clear();
         spawnBurst = null;
@@ -87,7 +100,7 @@ public sealed class BossBulletPattern : MonoBehaviour
         if (bulletPrefab == null || bulletPrefab.Movement == null || playerTransform == null
             || playerHealth == null || playfield == null || bulletParent == null || bulletRegistry == null)
         {
-            Debug.LogError("패턴 발사기의 이동 프리팹·플레이어·필드·탄 부모·탄 관리자 참조를 확인해주세요.", this);
+            PlayLog.Write("TailBoss", "패턴 발사기의 이동 프리팹·플레이어·필드·탄 부모·탄 관리자 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -101,7 +114,7 @@ public sealed class BossBulletPattern : MonoBehaviour
         }
         catch (Exception exception)
         {
-            Debug.LogException(exception, this);
+            PlayLog.Write("TailBoss", exception.ToString(), LogType.Exception, this);
             enabled = false;
         }
     }
@@ -187,6 +200,7 @@ public sealed class BossBulletPattern : MonoBehaviour
             remainingCount = waveBurstCount,
             nextShotTime = startTime
         });
+        PlayLog.Write("TailBoss", $"Wave Burst Start ({waveBurstCount} bullets)");
     }
 
     private void PrepareBullet(TestBullet bullet)

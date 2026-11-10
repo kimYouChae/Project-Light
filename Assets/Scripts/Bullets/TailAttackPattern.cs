@@ -70,11 +70,24 @@ public sealed class TailAttackPattern : MonoBehaviour
     public bool IsRetreatComplete => activeTails.Count == 0;
 
     /// <summary>전투 시작부터 새 경고와 공격을 생성한다.</summary>
-    public void StartEmission() => emitting = true;
+    public void StartEmission()
+    {
+        if (!emitting)
+        {
+            PlayLog.Write("TailBoss", "Eruption Pattern Start");
+        }
+
+        emitting = true;
+    }
 
     /// <summary>경고 예약을 취소하고 이미 나온 꼬리를 피해 없이 회수한다.</summary>
     public void StopForBattleEnd()
     {
+        if (emitting)
+        {
+            PlayLog.Write("TailBoss", "Eruption Pattern End");
+        }
+
         emitting = false;
         foreach (PendingEruption pending in pendingEruptions)
             if (pending.warning != null)
@@ -103,7 +116,7 @@ public sealed class TailAttackPattern : MonoBehaviour
             || tailPrefab == null || tailPrefab.GetComponent<TailRiseVisual>() == null
             || dirtPrefab == null || dirtPrefab.Movement == null)
         {
-            Debug.LogError("꼬리 패턴의 플레이어·필드·풀 프리팹 참조를 확인해주세요.", this);
+            PlayLog.Write("TailBoss", "꼬리 패턴의 플레이어·필드·풀 프리팹 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -127,7 +140,7 @@ public sealed class TailAttackPattern : MonoBehaviour
             warningPool?.Clear();
             tailPool?.Clear();
             dirtPool?.Clear();
-            Debug.LogException(exception, this);
+            PlayLog.Write("TailBoss", exception.ToString(), LogType.Exception, this);
             enabled = false;
         }
     }
@@ -178,6 +191,7 @@ public sealed class TailAttackPattern : MonoBehaviour
                 spawnPosition = pending.position;
                 warningPool.Return(pending.warning);
                 tailPool.Rent(prepareTail);
+                PlayLog.Write("TailBoss", "Eruption Strike");
                 SpawnDirt();
             }
             else
@@ -191,6 +205,7 @@ public sealed class TailAttackPattern : MonoBehaviour
                     eruptionTime = nextWarningTime + warningDuration
                 });
                 nextWarningTime += patternInterval;
+                PlayLog.Write("TailBoss", "Eruption Warning Start");
             }
         }
         patternTime = endTime;
@@ -213,6 +228,9 @@ public sealed class TailAttackPattern : MonoBehaviour
 
     private void SpawnDirt()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        int previousDirtCount = activeDirt.Count;
+#endif
         for (int slot = 0; slot < dirtSlotCount; slot++)
         {
             if (IsGap(slot))
@@ -221,6 +239,9 @@ public sealed class TailAttackPattern : MonoBehaviour
             spawnDirection = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
             dirtPool.Rent(prepareDirt);
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        PlayLog.Write("TailBoss", $"Dirt Shoot ({activeDirt.Count - previousDirtCount} bullets)");
+#endif
     }
 
     private bool IsGap(int slot)

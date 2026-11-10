@@ -50,6 +50,7 @@ public sealed class RewardSelectionController : MonoBehaviour
         ownsPause = true;
         Time.timeScale = 0f;
         isSelectionOpen = true;
+        PlayLog.Write("Reward", "Selection Open");
     }
 
     /// <summary>
@@ -84,6 +85,7 @@ public sealed class RewardSelectionController : MonoBehaviour
         // 이번 선택을 닫아 중복 확정을 막는다.
         isSelectionOpen = false;
         history.AddRecord(card.Id, investedShards);
+        PlayLog.Write("Reward", $"Confirmed (card={card.Id}, shards={investedShards})");
         RestoreTimeScale();
         view.gameObject.SetActive(false);
     }

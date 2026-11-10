@@ -38,18 +38,18 @@ public sealed class RewardCardCatalog
         {
             if (card == null || string.IsNullOrWhiteSpace(card.Id))
             {
-                Debug.LogError(
+                PlayLog.Write("Reward",
                     "카탈로그에 비어 있는 카드 또는 ID가 있습니다.",
-                    this);
+                    LogType.Error, this);
                 enabled = false;
                 return;
             }
 
             if (table.ContainsKey(card.Id))
             {
-                Debug.LogError(
+                PlayLog.Write("Reward",
                     $"카탈로그에 중복된 카드 ID가 있습니다: {card.Id}",
-                    this);
+                    LogType.Error, this);
                 enabled = false;
                 return;
             }

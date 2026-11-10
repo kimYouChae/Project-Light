@@ -90,6 +90,7 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
 
         if (trackingElapsed >= trackingDuration)
         {
+            PlayLog.Write("HeadBoss", "Searchlight Tracking Timeout");
             StopTracking();
             return;
         }
@@ -115,6 +116,7 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
         // 접촉 순간의 원을 고정하고 이동 감지를 시작한다.
         isTracking = false;
         isCaptured = true;
+        PlayLog.Write("HeadBoss", "Searchlight Capture");
         freezePattern.BeginDetection(center, radius);
 
         if (!freezePattern.IsDetecting)

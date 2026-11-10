@@ -100,7 +100,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         if (bulletPrefab == null || stageBattle == null || firePoint == null
             || bulletParent == null || playerHealth == null || playfield == null || stats == null)
         {
-            Debug.LogError("기본 공격의 프리팹, 전투 관리자, 발사점, 부모, 체력을 지정해주세요.", this);
+            PlayLog.Write("Player", "기본 공격의 프리팹, 전투 관리자, 발사점, 부모, 체력을 지정해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }

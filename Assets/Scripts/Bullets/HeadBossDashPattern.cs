@@ -6,10 +6,15 @@ public sealed class HeadBossDashPattern : MonoBehaviour
     [SerializeField] private HeadBossBitePattern bitePattern;
     [SerializeField] private HeadBossEntrance entrance;
     [SerializeField] private SpriteRenderer body;
+    [SerializeField] private LineRenderer dashParryRing;
 
     // ##TEMP 돌진 프로토타입 시작값.
     [SerializeField, Min(0.01f)] private float dashSpeed = 12f;
     [SerializeField, Min(0.01f)] private float contactRadius = 0.6f;
+
+    // ##TEMP 돌진 패링 예고 색상.
+    [SerializeField] private Color approachingRingColor = new Color(1f, 0.3f, 0.2f);
+    [SerializeField] private Color readyRingColor = new Color(1f, 0.9f, 0.35f);
 
     private SpriteRenderer playfield;
     private Camera fieldCamera;
@@ -22,6 +27,10 @@ public sealed class HeadBossDashPattern : MonoBehaviour
     private bool isDashing;
     private bool isExiting;
     private bool wasParried;
+    private bool hasPassedParryTarget;
+
+    private float ParryEntryDistance =>
+        playerLight.CoreRadius + contactRadius + perfectDodge.PerfectTolerance;
 
     /// <summary>이번 돌진이 플레이어 접촉으로 끝났는지 나타냅니다.</summary>
     public bool DidBite { get; private set; }
@@ -51,7 +60,9 @@ public sealed class HeadBossDashPattern : MonoBehaviour
         entrance.CancelReentry();
         DidBite = false;
         wasParried = false;
+        hasPassedParryTarget = false;
         isDashing = true;
+        PlayLog.Write("HeadBoss", $"Dash Start (speed={dashSpeed:F3})");
 
         if (playerLight != null && perfectDodge != null)
         {
@@ -138,6 +149,7 @@ public sealed class HeadBossDashPattern : MonoBehaviour
             out float contactProgress))
         {
             transform.position = Vector3.Lerp(start, end, contactProgress);
+            PlayLog.Write("HeadBoss", "Dash Contact");
             PlayerHealth bittenPlayer = target;
             ClearDashInput();
 
@@ -183,6 +195,7 @@ public sealed class HeadBossDashPattern : MonoBehaviour
     {
         ClearDashInput();
         isExiting = false;
+        PlayLog.Write("HeadBoss", "Dash Return Start");
         entrance.BeginReentry();
     }
 
@@ -212,16 +225,86 @@ public sealed class HeadBossDashPattern : MonoBehaviour
         return progress >= 0f && progress <= 1f;
     }
 
+    private void LateUpdate()
+    {
+        TryUpdateParryRing();
+    }
+
+    private bool TryGetParryApproach(out Vector2 toPlayer)
+    {
+        toPlayer = Vector2.zero;
+
+        if (!isDashing || wasParried || hasPassedParryTarget
+            || target == null || playerLight == null || perfectDodge == null)
+        {
+            return false;
+        }
+
+        toPlayer = (Vector2)(target.transform.position - transform.position);
+        float forwardDistance = Vector2.Dot(toPlayer, dashDirection);
+
+        if (forwardDistance <= 0f)
+        {
+            // 머리가 플레이어를 지났으면 이번 돌진의 패링을 닫는다.
+            hasPassedParryTarget = true;
+            return false;
+        }
+
+        Vector2 sideways = toPlayer - dashDirection * forwardDistance;
+        float entryDistance = ParryEntryDistance;
+        return sideways.sqrMagnitude <= entryDistance * entryDistance;
+    }
+
+    private bool CanParry()
+    {
+        return TryGetParryApproach(out _)
+            && playerLight.IsOnCoreBoundary(
+                transform.position, contactRadius, perfectDodge.PerfectTolerance);
+    }
+
+    private void TryUpdateParryRing()
+    {
+        if (!TryGetParryApproach(out Vector2 toPlayer) || dashParryRing == null)
+        {
+            HideParryRing();
+            return;
+        }
+
+        Vector3 center = target.transform.position;
+        float coreRadius = playerLight.CoreRadius;
+        float radius = coreRadius + Mathf.Max(0f, toPlayer.magnitude - ParryEntryDistance);
+
+        Color color = CanParry() ? readyRingColor : approachingRingColor;
+        dashParryRing.startColor = dashParryRing.endColor = color;
+
+        for (int index = 0; index < dashParryRing.positionCount; index++)
+        {
+            float angle = 2f * Mathf.PI * index / dashParryRing.positionCount;
+            Vector3 offset = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f);
+            dashParryRing.SetPosition(index, center + offset * radius);
+        }
+
+        dashParryRing.enabled = true;
+    }
+
+    private void HideParryRing()
+    {
+        if (dashParryRing != null)
+        {
+            dashParryRing.enabled = false;
+        }
+    }
+
     private bool TryParry()
     {
-        if (!isDashing || wasParried || playerLight == null || perfectDodge == null
-            || !playerLight.IsOnCoreBoundary(
-                transform.position, contactRadius, perfectDodge.PerfectTolerance))
+        if (!CanParry())
         {
             return false;
         }
 
         wasParried = true;
+        PlayLog.Write("HeadBoss", "Dash Parry Success");
+        HideParryRing();
         return true;
     }
 
@@ -245,6 +328,8 @@ public sealed class HeadBossDashPattern : MonoBehaviour
 
     private void ClearDashInput()
     {
+        HideParryRing();
+
         if (perfectDodge != null)
         {
             perfectDodge.UnregisterDashPerfect(TryParry);

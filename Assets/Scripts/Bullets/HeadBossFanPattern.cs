@@ -95,9 +95,9 @@ public sealed class HeadBossFanPattern : MonoBehaviour
             || playerHealth == null || playfield == null
             || bulletRegistry == null || bulletParent == null)
         {
-            Debug.LogError(
+            PlayLog.Write("HeadBoss",
                 "머리 부채꼴 패턴의 발사점·탄·씬 참조를 확인해주세요.",
-                this);
+                LogType.Error, this);
             return;
         }
 
@@ -115,7 +115,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
             }
             catch (Exception exception)
             {
-                Debug.LogException(exception, this);
+                PlayLog.Write("HeadBoss", exception.ToString(), LogType.Exception, this);
                 return;
             }
         }
@@ -216,6 +216,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
 
         gapOnLeft = !gapOnLeft;
         lastShotAt = Time.timeAsDouble;
+        PlayLog.Write("HeadBoss", $"Fan Shoot ({bulletCount - emptyCount} bullets)");
     }
 
     private void PrepareBullet(TestBullet bullet)

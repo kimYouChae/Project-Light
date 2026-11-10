@@ -41,6 +41,10 @@ public sealed class PlayerFrenzy : MonoBehaviour
         activeDuration = stats.FrenzyDuration;
         remainingTime = activeDuration;
         extendedTime = 0f;
+        if (IsActive)
+        {
+            PlayLog.Write("Frenzy", $"Start (duration={activeDuration:F3}s)");
+        }
     }
 
     /// <summary>동시 보너스가 적용된 탄 수만큼 상한 내에서 연장한다.</summary>
@@ -60,7 +64,10 @@ public sealed class PlayerFrenzy : MonoBehaviour
             return;
         remainingTime = Mathf.Max(0f, remainingTime - Time.deltaTime);
         if (!IsActive)
+        {
+            PlayLog.Write("Frenzy", "End");
             Ended?.Invoke();
+        }
     }
 
     private void OnValidate()

@@ -107,6 +107,7 @@ public sealed class HeadBossAimPattern : MonoBehaviour
         lockedDirection = aimDirection.normalized;
         isLocked = true;
         phaseStartedAt = Time.timeAsDouble;
+        PlayLog.Write("HeadBoss", $"Aim Lock Warning Start ({lockDuration:F3}s)");
 
         aimLine.widthMultiplier = originalWidthMultiplier * lockedWidthMultiplier;
         Color startColor = originalStartColor;

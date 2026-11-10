@@ -110,8 +110,14 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
     private void TryPerfectDodge()
     {
-        if (!isActiveAndEnabled || playerHealth.IsDead || bulletRegistry == null || Time.time < nextInputTime)
+        if (!isActiveAndEnabled || playerHealth.IsDead || bulletRegistry == null)
             return;
+
+        if (Time.time < nextInputTime)
+        {
+            PlayLog.Write("Perfect", "Input Blocked (retry lock)");
+            return;
+        }
 
         int count = tryDashPerfect?.Invoke() == true ? 1 : 0;
         // 입력 프레임에만 전체 목록을 순회한다. 충전 상한을 넘어도 모두 처리 표시한다.
@@ -129,10 +135,12 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         if (count == 0)
         {
             nextInputTime = Time.time + failureLockDuration;
+            PlayLog.Write("Perfect", "Miss (no target in range)");
             return;
         }
 
         playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
+        PlayLog.Write("Perfect", $"Success ({count} targets)");
 
         // 굳기 중 퍼펙트는 폭주 보상을 지급하지 않는다.
         if (playerMovement != null && playerMovement.IsFrozen)

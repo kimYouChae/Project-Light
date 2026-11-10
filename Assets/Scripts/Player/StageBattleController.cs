@@ -68,16 +68,16 @@ public sealed class StageBattleController : MonoBehaviour
 
         if (bossPrefab == null || spawnPoint == null || bossParent == null)
         {
-            Debug.LogError("보스 프리팹·생성 위치·부모를 지정해주세요.", this);
+            PlayLog.Write("Stage", "보스 프리팹·생성 위치·부모를 지정해주세요.", LogType.Error, this);
             return false;
         }
 
         if (bossPrefab.GetComponent<BossHealth>() == null
             || bossPrefab.GetComponent<IBossPattern>() == null)
         {
-            Debug.LogError(
+            PlayLog.Write("Stage",
                 "보스 프리팹 루트에 BossHealth와 IBossPattern 구현이 필요합니다.",
-                this);
+                LogType.Error, this);
             return false;
         }
 
@@ -108,6 +108,7 @@ public sealed class StageBattleController : MonoBehaviour
         isFighting = true;
         currentBoss.Defeated += OnBossDefeated;
 
+        PlayLog.Write("Stage", $"Battle Start ({boss.name})");
         battleStarted?.Invoke(currentBoss);
         return true;
     }
@@ -122,6 +123,7 @@ public sealed class StageBattleController : MonoBehaviour
         // 종료 연출 중에는 대상을 유지하고 종료 알림은 한 번만 보낸다.
         isFighting = false;
         currentBoss.Defeated -= OnBossDefeated;
+        PlayLog.Write("Stage", $"Boss Defeated ({currentBoss.name})");
         battleEnded?.Invoke(currentBoss);
     }
 
@@ -136,6 +138,7 @@ public sealed class StageBattleController : MonoBehaviour
             return false;
         }
 
+        PlayLog.Write("Stage", $"Battle End ({boss.name})");
         ClearCurrentBoss();
         DestroyCreatedBoss();
         return true;

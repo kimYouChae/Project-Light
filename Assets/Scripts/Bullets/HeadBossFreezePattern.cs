@@ -86,9 +86,9 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
 
         if (playerHealth == null || playerMovement == null)
         {
-            Debug.LogError(
+            PlayLog.Write("HeadBoss",
                 "서치라이트 이동 감지의 플레이어와 이동 컴포넌트를 확인해주세요.",
-                this);
+                LogType.Error, this);
             return;
         }
 
@@ -107,6 +107,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         hasTriggeredFreeze = false;
         isComplete = false;
         isDetecting = true;
+        PlayLog.Write("HeadBoss", $"Detection Start ({duration:F3}s)");
     }
 
     private void Update()
@@ -159,6 +160,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         hasTriggeredFreeze = true;
         movementSamples.Clear();
         playerMovement.SetFrozen(true);
+        PlayLog.Write("HeadBoss", "Freeze Start");
         TryStartVolley();
     }
 
@@ -167,7 +169,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         if (firePoint == null || bulletPrefab == null || playerLight == null || perfectDodge == null
             || playfield == null || bulletRegistry == null || bulletParent == null)
         {
-            Debug.LogError("굳기 부채꼴의 발사점·탄·씬 참조를 확인해주세요.", this);
+            PlayLog.Write("HeadBoss", "굳기 부채꼴의 발사점·탄·씬 참조를 확인해주세요.", LogType.Error, this);
             return;
         }
 
@@ -186,6 +188,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         if (distance <= decoyDistance || decoyDistance >= haloRadius
             || decoyClosestTime <= 0f)
         {
+            PlayLog.Write("HeadBoss", "Freeze Fan Skipped (distance, halo or timing)");
             return;
         }
 
@@ -217,6 +220,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         FireFreezeBullet(origin, forward, centerBulletSpeed, distance / centerBulletSpeed);
         FireFreezeBullet(origin, forward * forwardRatio + sideways * sideRatio,
             decoySpeed, decoyLifetime);
+        PlayLog.Write("HeadBoss", $"Freeze Fan Shoot ({FREEZE_BULLET_COUNT} bullets)");
     }
 
     private void FireFreezeBullet(
@@ -271,6 +275,11 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     /// </summary>
     public void StopDetection()
     {
+        if (isDetecting)
+        {
+            PlayLog.Write("HeadBoss", $"Detection End (frozen={hasTriggeredFreeze})");
+        }
+
         if (hasTriggeredFreeze && playerMovement != null)
         {
             playerMovement.SetFrozen(false);

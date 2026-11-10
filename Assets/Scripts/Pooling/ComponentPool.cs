@@ -62,7 +62,7 @@ public sealed class ComponentPool<T> where T : Component
 
         if (instance == null)
         {
-            Debug.LogWarning($"[{nameof(ComponentPool<T>)}] {typeof(T).Name} 풀 고갈: 초기 수량을 늘려주세요.");
+            PlayLog.Write("Pool", $"[{nameof(ComponentPool<T>)}] {typeof(T).Name} 풀 고갈: 초기 수량을 늘려주세요.", LogType.Warning);
             instance = CreateInstance();
         }
 
@@ -85,7 +85,7 @@ public sealed class ComponentPool<T> where T : Component
     {
         if (instance == null || !rented.Remove(instance))
         {
-            Debug.LogWarning($"[{nameof(ComponentPool<T>)}] null, 다른 풀 소속 또는 이미 반환된 객체입니다.");
+            PlayLog.Write("Pool", $"[{nameof(ComponentPool<T>)}] null, 다른 풀 소속 또는 이미 반환된 객체입니다.", LogType.Warning);
             return;
         }
 

@@ -83,7 +83,7 @@ public sealed class LightShardDropper : MonoBehaviour
         if (stageBattle == null || playerHealth == null || wallet == null
             || shardPrefab == null || shardParent == null || playfield == null)
         {
-            Debug.LogError("빛 조각 드랍의 전투 관리자·플레이어·보유량·프리팹·부모·필드 참조를 확인해주세요.", this);
+            PlayLog.Write("Reward", "빛 조각 드랍의 전투 관리자·플레이어·보유량·프리팹·부모·필드 참조를 확인해주세요.", LogType.Error, this);
             enabled = false;
             return;
         }
@@ -96,7 +96,7 @@ public sealed class LightShardDropper : MonoBehaviour
         }
         catch (Exception exception)
         {
-            Debug.LogException(exception, this);
+            PlayLog.Write("Reward", exception.ToString(), LogType.Exception, this);
             enabled = false;
         }
     }
