@@ -241,18 +241,15 @@ public sealed class HeadBossDashPattern : MonoBehaviour
         }
 
         toPlayer = (Vector2)(target.transform.position - transform.position);
-        float forwardDistance = Vector2.Dot(toPlayer, dashDirection);
 
-        if (forwardDistance <= 0f)
+        if (Vector2.Dot(toPlayer, dashDirection) <= 0f)
         {
-            // 머리가 플레이어를 지났으면 이번 돌진의 패링을 닫는다.
+            // 머리가 플레이어를 지나면 이번 돌진의 패링 표시를 닫는다.
             hasPassedParryTarget = true;
             return false;
         }
 
-        Vector2 sideways = toPlayer - dashDirection * forwardDistance;
-        float entryDistance = ParryEntryDistance;
-        return sideways.sqrMagnitude <= entryDistance * entryDistance;
+        return true;
     }
 
     private bool CanParry()
