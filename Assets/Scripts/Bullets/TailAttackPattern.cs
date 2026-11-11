@@ -48,6 +48,7 @@ public sealed class TailAttackPattern : MonoBehaviour
     private double patternTime;
     private double nextWarningTime;
     private bool emitting;
+    private bool singleAttack;
 
     /// <summary>
     /// 씬의 플레이어·필드·탄 관리자·풀 부모를 연결합니다.
@@ -69,9 +70,23 @@ public sealed class TailAttackPattern : MonoBehaviour
     /// <summary>발밑 꼬리 회수가 모두 끝났는지 반환한다.</summary>
     public bool IsRetreatComplete => activeTails.Count == 0;
 
+    /// <summary>한 번 예약한 꼬리 공격의 회수 완료 상태입니다.</summary>
+    public bool IsSingleAttackComplete =>
+        !singleAttack && pendingEruptions.Count == 0 && IsRetreatComplete;
+
+    /// <summary>뱀 보스 세트에서 꼬리 공격을 한 번 예약합니다.</summary>
+    public void StartSingleAttack()
+    {
+        patternTime = 0d;
+        nextWarningTime = 0d;
+        singleAttack = true;
+        emitting = true;
+    }
+
     /// <summary>전투 시작부터 새 경고와 공격을 생성한다.</summary>
     public void StartEmission()
     {
+        singleAttack = false;
         if (!emitting)
         {
             PlayLog.Write("TailBoss", "Eruption Pattern Start");
@@ -83,6 +98,7 @@ public sealed class TailAttackPattern : MonoBehaviour
     /// <summary>경고 예약을 취소하고 이미 나온 꼬리를 피해 없이 회수한다.</summary>
     public void StopForBattleEnd()
     {
+        singleAttack = false;
         if (emitting)
         {
             PlayLog.Write("TailBoss", "Eruption Pattern End");
@@ -204,11 +220,19 @@ public sealed class TailAttackPattern : MonoBehaviour
                     position = spawnPosition,
                     eruptionTime = nextWarningTime + warningDuration
                 });
-                nextWarningTime += patternInterval;
+                nextWarningTime = singleAttack
+                    ? double.PositiveInfinity
+                    : nextWarningTime + patternInterval;
                 PlayLog.Write("TailBoss", "Eruption Warning Start");
             }
         }
         patternTime = endTime;
+
+        if (singleAttack && pendingEruptions.Count == 0 && IsRetreatComplete)
+        {
+            singleAttack = false;
+            emitting = false;
+        }
     }
 
     private void PrepareWarning(SpriteRenderer warning)
@@ -282,6 +306,7 @@ public sealed class TailAttackPattern : MonoBehaviour
 
     private void OnDisable()
     {
+        singleAttack = false;
         emitting = false;
         foreach (PendingEruption pending in pendingEruptions)
         {

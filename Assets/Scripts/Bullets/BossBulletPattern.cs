@@ -58,6 +58,27 @@ public sealed class BossBulletPattern : MonoBehaviour
         bulletParent = poolParent;
     }
 
+    /// <summary>한 줄에 예약된 물결탄을 모두 발사했는지 반환합니다.</summary>
+    public bool IsSingleWaveComplete => waveBursts.Count == 0;
+
+    /// <summary>단발 물결탄의 마지막 탄이 발사된 게임 시각입니다.</summary>
+    public double SingleWaveFinishedAt { get; private set; }
+
+    /// <summary>현재 플레이어 방향으로 물결탄 한 줄을 예약합니다.</summary>
+    public void StartSingleWave()
+    {
+        if (emitting)
+        {
+            return;
+        }
+
+        ResetPattern();
+        nextShotTime = double.PositiveInfinity;
+        nextPhaseTime = double.PositiveInfinity;
+        emitting = true;
+        StartWaveBurst(patternTime);
+    }
+
     /// <summary>전투 시작부터 새 공격을 생성한다.</summary>
     public void StartEmission()
     {
@@ -181,13 +202,22 @@ public sealed class BossBulletPattern : MonoBehaviour
             }
         }
         patternTime = endTime;
+
+        if (double.IsPositiveInfinity(nextPhaseTime) && waveBursts.Count == 0)
+        {
+            SingleWaveFinishedAt = Time.timeAsDouble;
+            emitting = false;
+        }
     }
 
     private void StartWaveBurst(double startTime)
     {
         Vector2 direction = playerTransform.position - transform.position;
         if (direction.sqrMagnitude <= Mathf.Epsilon)
+        {
             direction = Vector2.down;
+        }
+
         waveBursts.Add(new WaveBurst
         {
             position = transform.position,

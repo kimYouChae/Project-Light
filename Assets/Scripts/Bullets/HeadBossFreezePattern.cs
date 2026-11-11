@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -37,6 +38,8 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     private Vector2 detectionCenter;
     private float detectionRadiusSquared;
     private double detectionStartedAt;
+    private Func<Vector2, bool> isSightBlocked;
+    private bool wasSightBlocked;
 
     private readonly Queue<(double Time, Vector2 Position)> movementSamples =
         new Queue<(double Time, Vector2 Position)>();
@@ -77,7 +80,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     }
 
     /// <summary>포착된 서치라이트 원을 기준으로 이동 감지를 시작합니다.</summary>
-    public void BeginDetection(Vector2 center, float radius)
+    public void BeginDetection(Vector2 center, float radius, Func<Vector2, bool> isSightBlocked = null)
     {
         if (!isActiveAndEnabled || isDetecting)
         {
@@ -100,6 +103,8 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         detectionCenter = center;
         detectionRadiusSquared = radius * radius;
         detectionStartedAt = Time.timeAsDouble;
+        this.isSightBlocked = isSightBlocked;
+        wasSightBlocked = isSightBlocked?.Invoke(playerHealth.transform.position) == true;
 
         movementSamples.Clear();
         previousMovementSample = (0d, (Vector2)playerHealth.transform.position);
@@ -148,6 +153,15 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         }
 
         Vector2 playerPosition = playerHealth.transform.position;
+        bool sightBlocked = isSightBlocked?.Invoke(playerPosition) == true;
+        if (sightBlocked || wasSightBlocked)
+        {
+            movementSamples.Clear();
+            previousMovementSample = (elapsed, playerPosition);
+            wasSightBlocked = sightBlocked;
+            return;
+        }
+
         bool hasMoved = HasMovedWithinWindow(elapsed, playerPosition);
         bool isInsideCircle =
             (playerPosition - detectionCenter).sqrMagnitude <= detectionRadiusSquared;
@@ -248,7 +262,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         }
 
         double comparisonTime = elapsed - movementSampleWindow;
-        if (comparisonTime < 0d)
+        if (comparisonTime < previousMovementSample.Time)
         {
             return false;
         }
@@ -287,6 +301,8 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
 
         movementSamples.Clear();
         isVolleyRunning = false;
+        isSightBlocked = null;
+        wasSightBlocked = false;
         isDetecting = false;
         hasTriggeredFreeze = false;
         isComplete = false;

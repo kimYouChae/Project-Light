@@ -27,6 +27,7 @@ public sealed class TailLanePattern : MonoBehaviour
     private double patternTime;
     private double nextWarningTime;
     private bool emitting;
+    private bool singleAttack;
 
     /// <summary>
     /// 씬의 플레이어·필드·풀 부모를 연결합니다.
@@ -45,9 +46,22 @@ public sealed class TailLanePattern : MonoBehaviour
     /// <summary>레인 꼬리 회수가 모두 끝났는지 반환한다.</summary>
     public bool IsRetreatComplete => attacks.Count == 0;
 
+    /// <summary>한 번 예약한 꼬리 공격의 회수 완료 상태입니다.</summary>
+    public bool IsSingleAttackComplete => !singleAttack && IsRetreatComplete;
+
+    /// <summary>뱀 보스 세트에서 꼬리 공격을 한 번 예약합니다.</summary>
+    public void StartSingleAttack()
+    {
+        patternTime = 0d;
+        nextWarningTime = 0d;
+        singleAttack = true;
+        emitting = true;
+    }
+
     /// <summary>전투 시작부터 새 레인 경고와 공격을 생성한다.</summary>
     public void StartEmission()
     {
+        singleAttack = false;
         if (!emitting)
         {
             PlayLog.Write("TailBoss", "Lane Pattern Start");
@@ -59,6 +73,7 @@ public sealed class TailLanePattern : MonoBehaviour
     /// <summary>경고를 취소하고 이미 나온 꼬리만 피해 없이 회수한다.</summary>
     public void StopForBattleEnd()
     {
+        singleAttack = false;
         if (emitting)
         {
             PlayLog.Write("TailBoss", "Lane Pattern End");
@@ -146,7 +161,9 @@ public sealed class TailLanePattern : MonoBehaviour
         while (nextWarningTime <= patternTime)
         {
             BeginWarning(nextWarningTime);
-            nextWarningTime += patternInterval;
+            nextWarningTime = singleAttack
+                ? double.PositiveInfinity
+                : nextWarningTime + patternInterval;
         }
         for (int i = attacks.Count - 1; i >= 0; i--)
         {
@@ -168,6 +185,12 @@ public sealed class TailLanePattern : MonoBehaviour
                 PlayLog.Write("TailBoss", "Lane Strike");
             }
             attack.hazard.Advance(age);
+        }
+
+        if (singleAttack && attacks.Count == 0)
+        {
+            singleAttack = false;
+            emitting = false;
         }
     }
 
@@ -207,6 +230,7 @@ public sealed class TailLanePattern : MonoBehaviour
 
     private void OnDisable()
     {
+        singleAttack = false;
         emitting = false;
         foreach (Attack attack in attacks)
             ReturnAttack(attack);

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>서치라이트 중심을 플레이어 쪽으로 옮기고 반경을 키웁니다.</summary>
@@ -15,16 +16,31 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
     // ##TEMP 포착하지 못했을 때 추적을 끝내는 시간.
     [SerializeField, Min(0.01f)] private float trackingDuration = 6f;
 
+    // ##TEMP 포착 후 플레이어 중앙까지 이동하는 시간.
+    [SerializeField, Min(0.01f)] private float centerMoveDuration = 0.3f;
+
     private Vector3 originLocalPosition;
     private Transform target;
+    private Func<Vector2, bool> isSightBlocked;
+    private Func<Vector2, Vector2> selectTrackingDestination;
     private Vector2 center;
     private float radius;
     private float trackingElapsed;
     private bool isTracking;
+    private bool isCentering;
     private bool isCaptured;
+    private bool isCoordinated;
+    private Vector2 centerMoveStart;
+    private float centerMoveElapsed;
 
-    /// <summary>추적 또는 포착 후 감지가 진행 중인지 나타냅니다.</summary>
-    public bool IsRunning => isTracking || isCaptured;
+    /// <summary>추적, 중앙 이동 또는 감지가 진행 중인지 나타냅니다.</summary>
+    public bool IsRunning => isTracking || isCentering || isCaptured;
+
+    /// <summary>포착 후 플레이어 중앙으로 이동 중인지 반환합니다.</summary>
+    public bool IsCentering => isCentering;
+
+    /// <summary>현재 바닥 원의 중심을 반환합니다.</summary>
+    public Vector2 Center => center;
 
     private void Awake()
     {
@@ -38,12 +54,33 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
     /// <summary>머리 아래 기준 위치에서 플레이어 추적을 시작합니다.</summary>
     public void BeginTracking(Transform player)
     {
+        TryBeginTracking(player, coordinated: false);
+    }
+
+    /// <summary>보스 기준 시작 위치에서 조율 패턴의 서치라이트를 시작합니다.</summary>
+    public bool BeginCoordinatedTracking(
+        Transform player,
+        Func<Vector2, bool> isSightBlocked,
+        Func<Vector2, Vector2> selectDestination)
+    {
+        return TryBeginTracking(
+            player, coordinated: true, isSightBlocked: isSightBlocked,
+            selectDestination: selectDestination);
+    }
+
+    private bool TryBeginTracking(
+        Transform player, bool coordinated, Func<Vector2, bool> isSightBlocked = null,
+        Func<Vector2, Vector2> selectDestination = null)
+    {
         if (!isActiveAndEnabled || visual == null || freezePattern == null
-            || player == null || isTracking || isCaptured)
+            || player == null || IsRunning)
         {
-            return;
+            return false;
         }
 
+        isCoordinated = coordinated;
+        this.isSightBlocked = isSightBlocked;
+        selectTrackingDestination = selectDestination;
         target = player;
         center = transform.TransformPoint(originLocalPosition);
         radius = startRadius;
@@ -51,11 +88,36 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
         isTracking = true;
         visual.Show(center, radius);
         TryCapture();
+        return true;
     }
 
     private void Update()
     {
-        if (!IsRunning || Time.deltaTime <= 0f)
+        if (!isCoordinated)
+        {
+            Advance(Time.deltaTime);
+        }
+    }
+
+    /// <summary>뱀 보스가 관리하는 서치라이트를 한 프레임 진행합니다.</summary>
+    public void AdvanceCoordinated(float deltaTime)
+    {
+        if (isCoordinated)
+        {
+            Advance(deltaTime);
+        }
+    }
+
+    /// <summary>합류 중인 원을 기존 반경으로 표시합니다.</summary>
+    public void ShowJoiningAt(Vector2 position)
+    {
+        center = position;
+        visual.Show(center, radius);
+    }
+
+    private void Advance(float deltaTime)
+    {
+        if (!IsRunning || deltaTime <= 0f)
         {
             return;
         }
@@ -66,26 +128,22 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
             return;
         }
 
+        if (isCentering)
+        {
+            AdvanceCenterMove(deltaTime);
+            return;
+        }
+
         if (isCaptured)
         {
             if (freezePattern == null || !freezePattern.IsDetecting)
             {
                 StopTracking();
-                return;
-            }
-
-            if (freezePattern.HasTriggeredFreeze)
-            {
-                // 플레이어가 굳으면 원의 크기를 유지한 채 중앙으로 옮긴다.
-                center = Vector2.MoveTowards(
-                    center, target.position, trackingSpeed * Time.deltaTime);
-                visual.Show(center, radius);
             }
 
             return;
         }
 
-        float deltaTime = Time.deltaTime;
         trackingElapsed += deltaTime;
 
         if (trackingElapsed >= trackingDuration)
@@ -95,8 +153,9 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
             return;
         }
 
-        center = Vector2.MoveTowards(
-            center, target.position, trackingSpeed * deltaTime);
+        Vector2 destination = selectTrackingDestination?.Invoke(center)
+            ?? (Vector2)target.position;
+        center = Vector2.MoveTowards(center, destination, trackingSpeed * deltaTime);
 
         radius = Mathf.MoveTowards(
             radius, maxRadius, growthSpeed * deltaTime);
@@ -107,17 +166,36 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
 
     private void TryCapture()
     {
-        Vector2 offset = (Vector2)target.position - center;
-        if (offset.sqrMagnitude > radius * radius)
+        Vector2 playerPosition = target.position;
+        Vector2 offset = playerPosition - center;
+        if (offset.sqrMagnitude > radius * radius
+            || isSightBlocked?.Invoke(playerPosition) == true)
         {
             return;
         }
 
-        // 접촉 순간의 원을 고정하고 이동 감지를 시작한다.
         isTracking = false;
-        isCaptured = true;
+        isCentering = true;
+        centerMoveStart = center;
+        centerMoveElapsed = 0f;
         PlayLog.Write("HeadBoss", "Searchlight Capture");
-        freezePattern.BeginDetection(center, radius);
+    }
+
+    private void AdvanceCenterMove(float deltaTime)
+    {
+        centerMoveElapsed += deltaTime;
+        float progress = Mathf.Clamp01(centerMoveElapsed / centerMoveDuration);
+        center = Vector2.Lerp(centerMoveStart, (Vector2)target.position, progress);
+        visual.Show(center, radius);
+
+        if (progress < 1f)
+        {
+            return;
+        }
+
+        isCentering = false;
+        isCaptured = true;
+        freezePattern.BeginDetection(center, radius, isSightBlocked);
 
         if (!freezePattern.IsDetecting)
         {
@@ -128,8 +206,12 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
     /// <summary>추적과 감지를 중단하고 서치라이트를 숨깁니다.</summary>
     public void StopTracking()
     {
+        isCoordinated = false;
         isTracking = false;
+        isCentering = false;
         target = null;
+        isSightBlocked = null;
+        selectTrackingDestination = null;
 
         if (isCaptured && freezePattern != null)
         {
@@ -156,5 +238,6 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
         trackingSpeed = Mathf.Max(0f, trackingSpeed);
         growthSpeed = Mathf.Max(0f, growthSpeed);
         trackingDuration = Mathf.Max(0.01f, trackingDuration);
+        centerMoveDuration = Mathf.Max(0.01f, centerMoveDuration);
     }
 }

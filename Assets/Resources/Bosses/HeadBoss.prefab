@@ -1012,6 +1012,7 @@ MonoBehaviour:
   trackingSpeed: 2
   growthSpeed: 0.5
   trackingDuration: 6
+  centerMoveDuration: 0.3
 --- !u!114 &3265451853135209261
 MonoBehaviour:
   m_ObjectHideFlags: 0
