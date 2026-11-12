@@ -593,7 +593,7 @@ GameObject:
   - component: {fileID: 204438829}
   - component: {fileID: 204438828}
   m_Layer: 0
-  m_Name: MiniBossBattleFlow
+  m_Name: StageBattleFlow
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -610,9 +610,15 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4a32d8fbe8d36be4484e84875e522e80, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MiniBossBattleFlow
+  m_EditorClassIdentifier: Assembly-CSharp::StageBattleFlow
   stageBattle: {fileID: 773758363}
   bulletRegistry: {fileID: 856490552}
+  bossPrefabs:
+  - {fileID: 8153261995339038613, guid: 554fcf3c1f4920b4b94357baa108e95b, type: 3}
+  - {fileID: 7691327090667390876, guid: 9f83c9c7d9a2cae4494b4558bebc31db, type: 3}
+  - {fileID: 7691327090667390876, guid: 0386fd26108b44edbfcddad0e37c829c, type: 3}
+  lightShardDropper: {fileID: 136445383}
+  battleEndHealRatio: 1
   playerHealth: {fileID: 2047060545}
   playfield: {fileID: 1864379177}
   bulletPoolParent: {fileID: 955776541}
@@ -1938,7 +1944,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 662866be41d944e46a4dd59c01e4846d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StageBattleController
-  bossPrefab: {fileID: 7691327090667390876, guid: 0386fd26108b44edbfcddad0e37c829c, type: 3}
   spawnPoint: {fileID: 1694933634}
   bossParent: {fileID: 580882484}
 --- !u!4 &773758364

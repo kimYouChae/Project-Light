@@ -44,6 +44,9 @@ public sealed class LightShardDropper : MonoBehaviour
     // 현재 적중 알림을 받고 있는 보스
     private BossHealth bossHealth;
 
+    /// <summary>아직 흡수되거나 반환되지 않은 빛 조각 수입니다.</summary>
+    public int ActiveShardCount => activeShards.Count;
+
     private void OnEnable()
     {
         if (stageBattle != null)
@@ -56,6 +59,15 @@ public sealed class LightShardDropper : MonoBehaviour
     private void OnBattleStarted(BossHealth boss)
     {
         BindBoss(boss);
+    }
+
+    /// <summary>전투 종료가 확정된 보스의 적중 알림을 해제합니다.</summary>
+    public void ReleaseBoss(BossHealth completedBoss)
+    {
+        if (completedBoss != null && bossHealth == completedBoss)
+        {
+            BindBoss(null);
+        }
     }
 
     private void BindBoss(BossHealth boss)
@@ -167,9 +179,20 @@ public sealed class LightShardDropper : MonoBehaviour
         }
 
         BindBoss(null);
+        ReturnActiveShards();
+    }
+
+    /// <summary>획득 처리 없이 남은 빛 조각을 풀에 반환합니다.</summary>
+    public void ReturnActiveShards()
+    {
         foreach (LightShard shard in new List<LightShard>(activeShards))
+        {
             if (shard != null)
+            {
                 shard.ReturnToPool();
+            }
+        }
+
         activeShards.Clear();
     }
 

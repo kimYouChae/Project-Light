@@ -6,7 +6,7 @@ using UnityEngine;
 public sealed class RewardSelectionFlow : MonoBehaviour
 {
     // 보상 요청을 전달할 전투 흐름
-    [SerializeField] private MiniBossBattleFlow battleFlow;
+    [SerializeField] private StageBattleFlow battleFlow;
 
     // 후보 추출 및 화면 처리
     [SerializeField] private RewardCardSelector selector;
@@ -17,11 +17,19 @@ public sealed class RewardSelectionFlow : MonoBehaviour
     [SerializeField] private LightShardWallet wallet;
     [SerializeField] private RewardSelectionHistory history;
 
+    private bool isBattleRewardOpen;
+
     private void OnEnable()
     {
         if (battleFlow != null)
         {
             battleFlow.RegisterRewardRequested(OnRewardRequested);
+            battleFlow.RegisterProgressStopped(OnProgressStopped);
+        }
+
+        if (controller != null)
+        {
+            controller.RegisterSelectionConfirmed(OnSelectionConfirmed);
         }
     }
 
@@ -30,12 +38,37 @@ public sealed class RewardSelectionFlow : MonoBehaviour
         if (battleFlow != null)
         {
             battleFlow.UnregisterRewardRequested(OnRewardRequested);
+            battleFlow.UnregisterProgressStopped(OnProgressStopped);
         }
+
+        if (controller != null)
+        {
+            controller.UnregisterSelectionConfirmed(OnSelectionConfirmed);
+        }
+
+        isBattleRewardOpen = false;
     }
 
     private void OnRewardRequested()
     {
-        TryOpenSelection();
+        isBattleRewardOpen = TryOpenSelection();
+    }
+
+    private void OnProgressStopped()
+    {
+        isBattleRewardOpen = false;
+        controller?.CancelSelection();
+    }
+
+    private void OnSelectionConfirmed()
+    {
+        if (!isBattleRewardOpen)
+        {
+            return;
+        }
+
+        isBattleRewardOpen = false;
+        battleFlow.AdvanceAfterReward();
     }
 
     /// <summary>
@@ -45,6 +78,7 @@ public sealed class RewardSelectionFlow : MonoBehaviour
     public bool TryOpenSelection()
     {
         if (!Application.isPlaying
+            || (battleFlow != null && (battleFlow.IsStageCleared || battleFlow.IsProgressStopped))
             || selector == null || view == null
             || controller == null || wallet == null || history == null
             || controller.IsSelectionOpen)

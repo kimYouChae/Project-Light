@@ -106,3 +106,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LightShard
   healAmount: 2
   pickupRadius: 0.15
+  pickupDelay: 1
+  attractionSpeed: 8

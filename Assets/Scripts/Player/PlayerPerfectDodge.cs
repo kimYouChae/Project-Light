@@ -45,6 +45,12 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
     /// <summary>PERFECT 판정선 안팎의 추가 허용 폭.</summary>
     public float PerfectTolerance => perfectTolerance;
 
+    /// <summary>축적된 퍼펙트 게이지를 초기화합니다.</summary>
+    public void ResetGauge()
+    {
+        currentGauge = 0f;
+    }
+
     /// <summary>현재 돌진의 패링 판정을 스페이스 입력에 연결합니다.</summary>
     public void RegisterDashPerfect(Func<bool> tryPerfect)
     {

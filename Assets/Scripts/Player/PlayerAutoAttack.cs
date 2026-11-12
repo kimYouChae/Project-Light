@@ -45,6 +45,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private Action<PlayerBullet> returnedBullet;
     private float elapsed;
     private PlayerFrenzy frenzy;
+    private PlayerMovement playerMovement;
 
     // 전투 시작 알림으로 전달받는 현재 공격 대상
     private BossHealth targetBoss;
@@ -55,6 +56,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
     private void Awake()
     {
         frenzy = GetComponent<PlayerFrenzy>();
+        playerMovement = GetComponent<PlayerMovement>();
         stats = GetComponent<PlayerStats>();
         attackEvents = GetComponent<PlayerAttackEvents>();
     }
@@ -123,6 +125,12 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             enhancedShotTimes.Clear();
             return;
         }
+
+        if (playerMovement != null && playerMovement.IsHeldByBite)
+        {
+            return;
+        }
+
         shotClock += Time.deltaTime;
         while (enhancedShotTimes.Count > 0 && enhancedShotTimes.Peek() <= shotClock)
         {

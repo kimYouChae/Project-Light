@@ -7,6 +7,12 @@ public sealed class LightShard : MonoBehaviour
     // ##TEMP 사용자 승인 빛 조각 회복량과 접촉 반경.
     [SerializeField, Min(1)] private int healAmount = 2;
     [SerializeField, Min(0.01f)] private float pickupRadius = 0.15f;
+
+    // ##TEMP 드롭 후 대기 시간과 흡수 이동 속도.
+    [SerializeField, Min(0f)] private float pickupDelay = 1f;
+    [SerializeField, Min(0.01f)] private float attractionSpeed = 8f;
+
+    private double attractionStartsAt;
     private PlayerHealth playerHealth;
     private LightShardWallet wallet;
     private Action<LightShard> release;
@@ -22,6 +28,7 @@ public sealed class LightShard : MonoBehaviour
         playerHealth = target;
         wallet = targetWallet;
         release = onRelease;
+        attractionStartsAt = Time.timeAsDouble + pickupDelay;
         prepared = true;
     }
 
@@ -36,10 +43,22 @@ public sealed class LightShard : MonoBehaviour
         if (!prepared || playerHealth == null || playerHealth.IsDead
             || !playerHealth.isActiveAndEnabled)
             return;
+        if (Time.timeAsDouble < attractionStartsAt)
+        {
+            return;
+        }
+
+        Vector3 position = transform.position;
+        Vector2 destination = playerHealth.transform.position;
+        Vector2 nextPosition = Vector2.MoveTowards(
+            position, destination, attractionSpeed * Time.deltaTime);
+        transform.position = new Vector3(nextPosition.x, nextPosition.y, position.z);
+
         float radius = pickupRadius + playerHealth.BodyRadius;
-        Vector2 offset = transform.position - playerHealth.transform.position;
-        if (offset.sqrMagnitude <= radius * radius)
+        if ((nextPosition - destination).sqrMagnitude <= radius * radius)
+        {
             TryCollect();
+        }
     }
 
     /// <summary>한 번만 회복·보유량 증가를 적용한다. 체력이 가득 차도 획득한다.</summary>

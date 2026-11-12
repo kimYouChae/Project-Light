@@ -4,7 +4,7 @@ using UnityEngine;
 public sealed class BossHealthView : MonoBehaviour
 {
     [SerializeField] private StageBattleController stageBattle;
-    [SerializeField] private MiniBossBattleFlow battleFlow;
+    [SerializeField] private StageBattleFlow battleFlow;
     [SerializeField] private GameObject barRoot;
     [SerializeField] private UnityEngine.UI.Image healthFill;
 
@@ -30,6 +30,11 @@ public sealed class BossHealthView : MonoBehaviour
         if (stageBattle == null || battleFlow == null
             || barRoot == null || healthFill == null)
             return;
+
+        if (stageBattle.CurrentBoss == null)
+        {
+            bossHealth = null;
+        }
 
         bool visible = bossHealth != null
             && stageBattle.CurrentBoss == bossHealth

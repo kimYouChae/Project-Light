@@ -20,9 +20,22 @@ public sealed class RewardSelectionController : MonoBehaviour
 
     // 이 컨트롤러가 시간을 정지했는지 여부
     private bool ownsPause;
+    private System.Action selectionConfirmed;
 
     /// <summary>선택창에서 확정을 기다리고 있는지 반환합니다.</summary>
     public bool IsSelectionOpen => isSelectionOpen;
+
+    /// <summary>보상 확정 알림을 등록합니다.</summary>
+    public void RegisterSelectionConfirmed(System.Action callback)
+    {
+        selectionConfirmed += callback;
+    }
+
+    /// <summary>보상 확정 알림을 해제합니다.</summary>
+    public void UnregisterSelectionConfirmed(System.Action callback)
+    {
+        selectionConfirmed -= callback;
+    }
 
     /// <summary>
     /// 지갑과 기록을 연결하고 필드 시간을 정지합니다.
@@ -88,6 +101,23 @@ public sealed class RewardSelectionController : MonoBehaviour
         PlayLog.Write("Reward", $"Confirmed (card={card.Id}, shards={investedShards})");
         RestoreTimeScale();
         view.gameObject.SetActive(false);
+        selectionConfirmed?.Invoke();
+    }
+
+    /// <summary>선택을 확정하지 않고 보상창을 닫습니다.</summary>
+    public void CancelSelection()
+    {
+        if (!isSelectionOpen)
+        {
+            return;
+        }
+
+        isSelectionOpen = false;
+        RestoreTimeScale();
+        if (view != null)
+        {
+            view.gameObject.SetActive(false);
+        }
     }
 
     private void OnDisable()

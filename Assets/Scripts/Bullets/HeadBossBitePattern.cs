@@ -254,7 +254,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
     /// <summary>입 고정을 풀고 플레이어의 물림 상태를 해제합니다.</summary>
     public void ReleaseHold()
     {
-        if (isThrowing && heldPlayer != null && heldMovement != null)
+        if (heldPlayer != null && heldMovement != null)
         {
             heldPlayer.transform.position =
                 heldMovement.ClampToPlayfield(heldPlayer.transform.position);

@@ -58,16 +58,32 @@ public sealed class PlayerFrenzy : MonoBehaviour
         extendedTime += extension;
     }
 
+    /// <summary>진행 중인 폭주를 끝내고 종료를 알립니다.</summary>
+    public void End()
+    {
+        if (!IsActive)
+        {
+            return;
+        }
+
+        remainingTime = 0f;
+        extendedTime = 0f;
+        activeDuration = 0f;
+        PlayLog.Write("Frenzy", "End");
+        Ended?.Invoke();
+    }
+
     private void Update()
     {
         if (!IsActive || (playerMovement != null && playerMovement.IsHeldByBite))
             return;
-        remainingTime = Mathf.Max(0f, remainingTime - Time.deltaTime);
-        if (!IsActive)
+        if (remainingTime <= Time.deltaTime)
         {
-            PlayLog.Write("Frenzy", "End");
-            Ended?.Invoke();
+            End();
+            return;
         }
+
+        remainingTime -= Time.deltaTime;
     }
 
     private void OnValidate()

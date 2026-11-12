@@ -7,7 +7,6 @@ using UnityEngine;
 public sealed class StageBattleController : MonoBehaviour
 {
     [Header("===보스 생성===")]
-    [SerializeField] private GameObject bossPrefab;
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform bossParent;
 
@@ -52,9 +51,10 @@ public sealed class StageBattleController : MonoBehaviour
 
     /// <summary>
     /// 지정된 프리팹으로 보스를 생성하고 체력·패턴을 반환합니다.
-    /// MiniBossBattleFlow.Start가 호출합니다.
+    /// StageBattleFlow가 호출합니다.
     /// </summary>
     public bool TryCreateBoss(
+        GameObject bossPrefab,
         out BossHealth health,
         out IBossPattern pattern)
     {
@@ -129,7 +129,7 @@ public sealed class StageBattleController : MonoBehaviour
 
     /// <summary>
     /// 종료 연출이 끝난 대상의 참조를 해제하고 생성한 보스를 제거합니다.
-    /// MiniBossBattleFlow.UpdateComplete가 호출합니다.
+    /// StageBattleFlow.UpdateComplete가 호출합니다.
     /// </summary>
     public bool TryCompleteBattle(BossHealth boss)
     {
