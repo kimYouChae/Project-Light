@@ -14,13 +14,11 @@ public sealed class SnakeBossSearchlightRocks : MonoBehaviour
     [SerializeField] private Vector2 rockSize = new Vector2(0.55f, 0.42f);
 
     private readonly List<SpriteRenderer> activeRocks = new List<SpriteRenderer>();
-    private SpriteRenderer field;
     private ComponentPool<SpriteRenderer> pool;
 
-    /// <summary>배치에 사용할 필드를 연결하고 돌을 사전 생성합니다.</summary>
-    public void Initialize(SpriteRenderer field)
+    /// <summary>돌을 풀에 사전 생성합니다.</summary>
+    public void Initialize()
     {
-        this.field = field;
         if (pool == null && rockPrefab != null && rockPrefab.sprite != null)
         {
             pool = new ComponentPool<SpriteRenderer>(
@@ -29,15 +27,14 @@ public sealed class SnakeBossSearchlightRocks : MonoBehaviour
     }
 
     /// <summary>플레이어 주변의 필드 안에 돌을 배치합니다.</summary>
-    public void SpawnAround(Vector2 playerPosition)
+    public void SpawnAround(Vector2 playerPosition, Bounds bounds)
     {
         ReturnAll();
-        if (field == null || pool == null || rockCount <= 0)
+        if (pool == null || rockCount <= 0)
         {
             return;
         }
 
-        Bounds bounds = field.bounds;
         Vector2 inward = (Vector2)bounds.center - playerPosition;
         float firstAngle = inward.sqrMagnitude > 0f
             ? Mathf.Atan2(inward.y, inward.x)
@@ -132,6 +129,24 @@ public sealed class SnakeBossSearchlightRocks : MonoBehaviour
         }
 
         return false;
+    }
+
+    /// <summary>현재 필드 경계 밖에 걸친 돌을 반환합니다.</summary>
+    public void ReturnOutside(Bounds fieldBounds)
+    {
+        for (int index = activeRocks.Count - 1; index >= 0; index--)
+        {
+            SpriteRenderer rock = activeRocks[index];
+            Bounds bounds = rock.bounds;
+            if (bounds.min.x >= fieldBounds.min.x && bounds.max.x <= fieldBounds.max.x
+                && bounds.min.y >= fieldBounds.min.y && bounds.max.y <= fieldBounds.max.y)
+            {
+                continue;
+            }
+
+            pool.Return(rock);
+            activeRocks.RemoveAt(index);
+        }
     }
 
     /// <summary>배치한 돌을 모두 풀에 반환합니다.</summary>

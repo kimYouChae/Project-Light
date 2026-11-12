@@ -23,10 +23,7 @@ public sealed class TailLaneHazard : MonoBehaviour
     public void Prepare(Bounds fieldBounds, Bounds dangerBounds, bool fromTop,
         float holdTime, float travelTime, int hitDamage, PlayerHealth target)
     {
-        field = fieldBounds;
-        area = dangerBounds;
-        insidePosition = area.center;
-        outsidePosition = insidePosition + Vector3.up * (fromTop ? field.size.y : -field.size.y);
+        UpdateBounds(fieldBounds, dangerBounds, fromTop);
         holdDuration = Mathf.Max(0f, holdTime);
         travelDuration = Mathf.Max(0.01f, travelTime);
         damage = hitDamage;
@@ -35,6 +32,16 @@ public sealed class TailLaneHazard : MonoBehaviour
         retreatElapsed = 0f;
         transform.localScale = Vector3.one;
         UpdatePose(0f);
+    }
+
+    /// <summary>공격 시간과 피해 상태를 유지한 채 레인 경계를 바꿉니다.</summary>
+    public void UpdateBounds(Bounds fieldBounds, Bounds dangerBounds, bool fromTop)
+    {
+        field = fieldBounds;
+        area = dangerBounds;
+        insidePosition = area.center;
+        outsidePosition = insidePosition
+            + Vector3.up * (fromTop ? field.size.y : -field.size.y);
     }
 
     /// <summary>등장 시작 후 경과 시간으로 연출과 현재 접촉 피해를 갱신한다.</summary>

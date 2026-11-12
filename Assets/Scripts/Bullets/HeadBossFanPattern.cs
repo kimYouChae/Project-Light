@@ -26,6 +26,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
     // 초기화 시 전달받는 씬 참조
     private PlayerHealth playerHealth;
     private SpriteRenderer playfield;
+    private FieldManager fieldManager;
     private BulletRegistry bulletRegistry;
     private Transform bulletParent;
 
@@ -70,10 +71,12 @@ public sealed class HeadBossFanPattern : MonoBehaviour
         PlayerHealth player,
         SpriteRenderer field,
         BulletRegistry registry,
-        Transform poolParent)
+        Transform poolParent,
+        FieldManager fieldManager = null)
     {
         playerHealth = player;
         playfield = field;
+        this.fieldManager = fieldManager;
         bulletRegistry = registry;
         bulletParent = poolParent;
     }
@@ -170,18 +173,18 @@ public sealed class HeadBossFanPattern : MonoBehaviour
         shotPosition = firePoint.position;
 
         // 아래쪽 기준 양수 각도는 화면 오른쪽이다.
-        float desiredGapAngle = gapOnLeft
-            ? -gapCenterAngle
-            : gapCenterAngle;
+        float widthRatio = fieldManager != null ? fieldManager.CurrentWidthRatio : 1f;
+        float currentSpreadAngle = spreadAngle * widthRatio;
+        float desiredGapAngle = (gapOnLeft ? -gapCenterAngle : gapCenterAngle) * widthRatio;
 
         float angleStep = bulletCount > 1
-            ? spreadAngle / (bulletCount - 1)
+            ? currentSpreadAngle / (bulletCount - 1)
             : 0f;
 
         // 원하는 각도와 가장 가까운 발사 방향을 틈 중심으로 고른다.
         int gapCenterSlot = angleStep > 0f
             ? Mathf.RoundToInt(
-                (desiredGapAngle + spreadAngle * 0.5f) / angleStep)
+                (desiredGapAngle + currentSpreadAngle * 0.5f) / angleStep)
             : bulletCount / 2;
 
         int emptyCount = Mathf.Clamp(gapSlotCount, 1, bulletCount);
@@ -202,7 +205,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
 
             float angle = bulletCount == 1
                 ? 0f
-                : -spreadAngle * 0.5f + angleStep * i;
+                : -currentSpreadAngle * 0.5f + angleStep * i;
 
             float radians = angle * Mathf.Deg2Rad;
 
@@ -227,7 +230,7 @@ public sealed class HeadBossFanPattern : MonoBehaviour
             bulletSpeed,
             float.PositiveInfinity,
             bulletRadius,
-            playfield.bounds,
+            fieldManager != null ? fieldManager.CurrentBounds : playfield.bounds,
             pool,
             releaseBullet,
             playerHealth,

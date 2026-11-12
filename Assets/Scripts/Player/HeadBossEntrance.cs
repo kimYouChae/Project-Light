@@ -79,6 +79,16 @@ public sealed class HeadBossEntrance : MonoBehaviour
         IsReentryComplete = false;
     }
 
+    /// <summary>등장·복귀의 도착점을 갱신합니다.</summary>
+    public void SetHomePosition(Vector3 position, bool moveImmediately)
+    {
+        endPosition = position;
+        if (moveImmediately && !isEntering)
+        {
+            transform.position = position;
+        }
+    }
+
     private void StartEntranceMove()
     {
         transform.position = startPosition;

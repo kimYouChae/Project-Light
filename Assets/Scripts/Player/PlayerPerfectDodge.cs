@@ -32,6 +32,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
     private PlayerFrenzy frenzy;
     private float nextInputTime;
     private Func<bool> tryDashPerfect;
+    private Func<bool> tryTailStabPerfect;
     private Action biteBraceInput;
 
     /// <summary>현재 충전된 퍼펙트 게이지.</summary>
@@ -56,6 +57,21 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         if (tryDashPerfect == tryPerfect)
         {
             tryDashPerfect = null;
+        }
+    }
+
+    /// <summary>꼬리 꽂기의 퍼펙트 판정을 스페이스 입력에 연결합니다.</summary>
+    public void RegisterTailStabPerfect(Func<bool> tryPerfect)
+    {
+        tryTailStabPerfect = tryPerfect;
+    }
+
+    /// <summary>같은 꼬리 꽂기가 등록한 퍼펙트 판정을 해제합니다.</summary>
+    public void UnregisterTailStabPerfect(Func<bool> tryPerfect)
+    {
+        if (tryTailStabPerfect == tryPerfect)
+        {
+            tryTailStabPerfect = null;
         }
     }
 
@@ -120,6 +136,11 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
         }
 
         int count = tryDashPerfect?.Invoke() == true ? 1 : 0;
+        if (tryTailStabPerfect?.Invoke() == true)
+        {
+            count++;
+        }
+
         // 입력 프레임에만 전체 목록을 순회한다. 충전 상한을 넘어도 모두 처리 표시한다.
         foreach (TestBullet bullet in bulletRegistry.ActiveBullets)
         {

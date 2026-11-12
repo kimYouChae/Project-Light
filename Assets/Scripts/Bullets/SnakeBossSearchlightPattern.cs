@@ -15,6 +15,8 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
 
     private PlayerHealth player;
     private SpriteRenderer field;
+    private FieldManager fieldManager;
+    private Bounds previousFieldBounds;
     private HeadBossSearchlightPattern captured;
     private HeadBossSearchlightPattern joining;
     private Vector2 joiningStart;
@@ -28,12 +30,14 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         PlayerHealth player,
         SpriteRenderer field,
         BulletRegistry registry,
-        Transform bulletPoolParent)
+        Transform bulletPoolParent,
+        FieldManager fieldManager)
     {
         this.player = player;
         this.field = field;
+        this.fieldManager = fieldManager;
         freezePattern.Initialize(player, field, registry, bulletPoolParent);
-        rocks.Initialize(field);
+        rocks.Initialize();
     }
 
     /// <summary>두 원의 추적을 동시에 시작합니다.</summary>
@@ -48,15 +52,15 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
 
         Transform target = player.transform;
         Vector2 playerPosition = target.position;
-        Bounds bounds = field.bounds;
+        previousFieldBounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
 
-        rocks.SpawnAround(playerPosition);
+        rocks.SpawnAround(playerPosition, previousFieldBounds);
         if (!left.BeginCoordinatedTracking(
                 target, position => rocks.BlocksSight(leftEye.position, position),
-                CreateSweepDestination(bounds, moveRight: true))
+                CreateSweepDestination(moveRight: true))
             || !right.BeginCoordinatedTracking(
                 target, position => rocks.BlocksSight(rightEye.position, position),
-                CreateSweepDestination(bounds, moveRight: false)))
+                CreateSweepDestination(moveRight: false)))
         {
             StopTracking();
             return;
@@ -66,21 +70,29 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         TrySelectCapture(playerPosition);
     }
 
-    private System.Func<Vector2, Vector2> CreateSweepDestination(
-        Bounds bounds, bool moveRight)
+    private System.Func<Vector2, Vector2> CreateSweepDestination(bool moveRight)
     {
         Vector2? destination = null;
 
         return currentCenter =>
         {
-            if (!destination.HasValue || currentCenter.Equals(destination.Value))
+            Bounds bounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
+            bool reached = destination.HasValue && currentCenter.Equals(destination.Value);
+            if (reached)
+            {
+                moveRight = !moveRight;
+            }
+
+            if (!destination.HasValue || reached
+                || destination.Value.x < bounds.min.x || destination.Value.x > bounds.max.x
+                || destination.Value.y < bounds.min.y || destination.Value.y > bounds.max.y)
             {
                 float x = moveRight
                     ? Random.Range(bounds.center.x, bounds.max.x)
                     : Random.Range(bounds.min.x, bounds.center.x);
 
-                destination = new Vector2(x, currentCenter.y);
-                moveRight = !moveRight;
+                float y = Random.Range(bounds.min.y, bounds.max.y);
+                destination = new Vector2(x, y);
             }
 
             return destination.Value;
@@ -99,6 +111,13 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         {
             StopTracking();
             return;
+        }
+
+        Bounds currentBounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
+        if (!previousFieldBounds.Equals(currentBounds))
+        {
+            rocks.ReturnOutside(currentBounds);
+            previousFieldBounds = currentBounds;
         }
 
         if (captured == null)

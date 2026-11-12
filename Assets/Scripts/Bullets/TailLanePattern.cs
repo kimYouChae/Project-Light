@@ -7,6 +7,7 @@ public sealed class TailLanePattern : MonoBehaviour
 {
     // 초기화 시 전달받는 씬 참조
     private SpriteRenderer playfield;
+    private FieldManager fieldManager;
     private PlayerHealth playerHealth;
     private Transform objectParent;
     [SerializeField] private TailLaneWarning warningPrefab;
@@ -36,10 +37,12 @@ public sealed class TailLanePattern : MonoBehaviour
     public void Initialize(
         PlayerHealth player,
         SpriteRenderer field,
-        Transform poolParent)
+        Transform poolParent,
+        FieldManager fieldManager = null)
     {
         playerHealth = player;
         playfield = field;
+        this.fieldManager = fieldManager;
         objectParent = poolParent;
     }
 
@@ -99,6 +102,7 @@ public sealed class TailLanePattern : MonoBehaviour
         public TailLaneHazard hazard;
         public Bounds field;
         public Bounds area;
+        public int laneIndex;
         public bool fromTop;
         public double startTime;
         public float warningTime;
@@ -165,10 +169,25 @@ public sealed class TailLanePattern : MonoBehaviour
                 ? double.PositiveInfinity
                 : nextWarningTime + patternInterval;
         }
+        Bounds currentBounds = fieldManager != null ? fieldManager.CurrentBounds : playfield.bounds;
         for (int i = attacks.Count - 1; i >= 0; i--)
         {
             Attack attack = attacks[i];
             float age = (float)(patternTime - attack.startTime) - attack.warningTime;
+            if (!attack.field.Equals(currentBounds))
+            {
+                attack.field = currentBounds;
+                attack.area = GetLaneArea(currentBounds, attack.laneIndex);
+                attack.warning.Prepare(
+                    currentBounds, attack.area, attack.fromTop, safeEdgeRatio);
+
+                if (attack.hazard != null)
+                {
+                    attack.warning.HideAttackWarning();
+                    attack.hazard.UpdateBounds(currentBounds, attack.area, attack.fromTop);
+                }
+            }
+
             if (age < 0f)
                 continue;
             if (age >= attack.travelTime * 2f + attack.holdTime)
@@ -196,22 +215,30 @@ public sealed class TailLanePattern : MonoBehaviour
 
     private void BeginWarning(double startTime)
     {
-        Bounds field = playfield.bounds;
+        Bounds field = fieldManager != null ? fieldManager.CurrentBounds : playfield.bounds;
         int laneIndex = UnityEngine.Random.Range(0, 3);
         bool fromTop = UnityEngine.Random.Range(0, 2) == 0;
-        float laneWidth = field.size.x / 3f;
-        float laneLeft = field.min.x + laneWidth * laneIndex;
-        float dangerLeft = laneLeft + laneWidth * safeEdgeRatio;
-        float dangerRight = laneLeft + laneWidth * (1f - safeEdgeRatio);
-        Bounds area = new Bounds(new Vector3((dangerLeft + dangerRight) * 0.5f, field.center.y, 0f),
-            new Vector3(dangerRight - dangerLeft, field.size.y, 0f));
+        Bounds area = GetLaneArea(field, laneIndex);
         TailLaneWarning warning = warningPool.Rent(item => item.Prepare(field, area, fromTop, safeEdgeRatio));
         attacks.Add(new Attack
         {
             warning = warning, field = field, area = area, fromTop = fromTop, startTime = startTime,
+            laneIndex = laneIndex,
             warningTime = warningDuration, holdTime = holdDuration, travelTime = travelDuration, damage = damage
         });
         PlayLog.Write("TailBoss", $"Lane Warning Start (lane={laneIndex + 1})");
+    }
+
+    private Bounds GetLaneArea(Bounds field, int laneIndex)
+    {
+        float laneWidth = field.size.x / 3f;
+        float laneLeft = field.min.x + laneWidth * laneIndex;
+        float dangerLeft = laneLeft + laneWidth * safeEdgeRatio;
+        float dangerRight = laneLeft + laneWidth * (1f - safeEdgeRatio);
+
+        return new Bounds(
+            new Vector3((dangerLeft + dangerRight) * 0.5f, field.center.y, 0f),
+            new Vector3(dangerRight - dangerLeft, field.size.y, 0f));
     }
 
     private void ReturnAttack(Attack attack)

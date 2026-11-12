@@ -35,6 +35,9 @@ public sealed class HeadBossDashPattern : MonoBehaviour
     /// <summary>이번 돌진이 플레이어 접촉으로 끝났는지 나타냅니다.</summary>
     public bool DidBite { get; private set; }
 
+    /// <summary>돌진 또는 화면 밖 이탈 이동 중인지 반환합니다.</summary>
+    public bool IsMovingAway => isDashing || isExiting;
+
     /// <summary>돌진 종료 위치를 계산할 필드 표시를 연결합니다.</summary>
     public void Initialize(SpriteRenderer field)
     {

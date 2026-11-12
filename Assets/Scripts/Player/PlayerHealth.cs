@@ -95,6 +95,17 @@ public sealed class PlayerHealth : MonoBehaviour
         ApplyHit(1, grantsInvulnerability: false);
     }
 
+    /// <summary>꼬리 꽂기 퍼펙트 실패로 헤일로 두 칸을 잃습니다.</summary>
+    public void ApplyTailStabDamage()
+    {
+        if (!isActiveAndEnabled || isDead)
+        {
+            return;
+        }
+
+        ApplyHit(2, grantsInvulnerability: true);
+    }
+
     private void ApplyHit(int damage, bool grantsInvulnerability)
     {
         if (currentHealth == 0)
