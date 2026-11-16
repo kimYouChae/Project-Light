@@ -67,34 +67,55 @@ public sealed class EnemyBulletMovement : MonoBehaviour
     public Vector2 Move(float deltaTime)
     {
         deltaTime = Mathf.Max(0f, deltaTime);
+        if (motionType == MotionType.Homing && target != null)
+        {
+            Vector2 desired = (Vector2)target.position - position;
+            if (desired.sqrMagnitude > Mathf.Epsilon)
+            {
+                float angle = Vector2.SignedAngle(direction, desired);
+                float turn = Mathf.Clamp(angle, -turnSpeed * deltaTime, turnSpeed * deltaTime);
+                direction = Quaternion.Euler(0f, 0f, turn) * direction;
+            }
+        }
+
+        position = EvaluatePosition(deltaTime);
+        if (motionType == MotionType.Wave)
+            elapsed += deltaTime;
+        else if (motionType == MotionType.Accelerating)
+            speed += acceleration * deltaTime;
+
+        return position;
+    }
+
+    public bool CanPredictTiming => motionType != MotionType.Homing;
+    public bool IsStraight => motionType == MotionType.Straight;
+
+    /// <summary>현재 이동 상태에서 지정 게임 시간 뒤의 위치를 읽습니다.</summary>
+    public Vector2 EvaluatePosition(float seconds)
+    {
         if (motionType == MotionType.Wave)
         {
-            elapsed += deltaTime;
-            Vector2 forward = direction * speed * elapsed;
+            float waveTime = elapsed + seconds;
+            Vector2 forward = direction * speed * waveTime;
             Vector2 sideways = perpendicular * amplitude
-                * Mathf.Sin(elapsed * Mathf.PI * 2f / period);
-            position = startPosition + forward + sideways;
+                * Mathf.Sin(waveTime * Mathf.PI * 2f / period);
+            return startPosition + forward + sideways;
         }
-        else
+
+        float distance = speed * seconds;
+        if (motionType == MotionType.Accelerating)
+            distance += 0.5f * acceleration * seconds * seconds;
+        return position + direction * distance;
+    }
+
+    public float GetMaxSpeed(float horizon)
+    {
+        if (motionType == MotionType.Wave)
         {
-            if (motionType == MotionType.Homing && target != null)
-            {
-                Vector2 desired = (Vector2)target.position - position;
-                if (desired.sqrMagnitude > Mathf.Epsilon)
-                {
-                    float angle = Vector2.SignedAngle(direction, desired);
-                    float turn = Mathf.Clamp(angle, -turnSpeed * deltaTime, turnSpeed * deltaTime);
-                    direction = Quaternion.Euler(0f, 0f, turn) * direction;
-                }
-            }
-            float distance = speed * deltaTime;
-            if (motionType == MotionType.Accelerating)
-            {
-                distance += 0.5f * acceleration * deltaTime * deltaTime;
-                speed += acceleration * deltaTime;
-            }
-            position += direction * distance;
+            float lateralSpeed = amplitude * Mathf.PI * 2f / period;
+            return Mathf.Sqrt(speed * speed + lateralSpeed * lateralSpeed);
         }
-        return position;
+
+        return speed + acceleration * horizon;
     }
 }

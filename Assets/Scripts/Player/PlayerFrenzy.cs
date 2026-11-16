@@ -16,6 +16,24 @@ public sealed class PlayerFrenzy : MonoBehaviour
     private float extendedTime;
     private float activeDuration;
     private PlayerMovement playerMovement;
+    private HeadBossDashPattern dashPausingCountdown;
+    private bool fieldShrinkCountdownPaused;
+
+    public void SetFieldShrinkCountdownPaused(bool paused)
+    {
+        fieldShrinkCountdownPaused = paused;
+    }
+
+    public void PauseCountdownForDash(HeadBossDashPattern dash)
+    {
+        dashPausingCountdown = dash;
+    }
+
+    public void ResumeCountdownForDash(HeadBossDashPattern dash)
+    {
+        if (dashPausingCountdown == dash)
+            dashPausingCountdown = null;
+    }
 
     /// <summary>폭주 종료 알림. 구독자는 비활성화 시 해제한다.</summary>
     public event Action Ended;
@@ -75,7 +93,8 @@ public sealed class PlayerFrenzy : MonoBehaviour
 
     private void Update()
     {
-        if (!IsActive || (playerMovement != null && playerMovement.IsHeldByBite))
+        if (!IsActive || fieldShrinkCountdownPaused || dashPausingCountdown != null
+            || (playerMovement != null && playerMovement.IsHeldByBite))
             return;
         if (remainingTime <= Time.deltaTime)
         {

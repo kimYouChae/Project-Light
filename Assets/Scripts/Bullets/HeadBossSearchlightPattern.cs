@@ -42,6 +42,9 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
     /// <summary>현재 바닥 원의 중심을 반환합니다.</summary>
     public Vector2 Center => center;
 
+    /// <summary>현재 바닥 원의 반경을 반환합니다.</summary>
+    public float Radius => radius;
+
     private void Awake()
     {
         if (visual != null)
@@ -51,10 +54,47 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
         }
     }
 
-    /// <summary>머리 아래 기준 위치에서 플레이어 추적을 시작합니다.</summary>
-    public void BeginTracking(Transform player)
+    /// <summary>머리 아래 기준 위치에서 필드 탐색을 시작합니다.</summary>
+    public void BeginTracking(Transform player, SpriteRenderer field)
     {
-        TryBeginTracking(player, coordinated: false);
+        if (field == null)
+        {
+            return;
+        }
+
+        TryBeginTracking(player, coordinated: false,
+            selectDestination: CreateSweepDestination(() => field.bounds, moveRight: true));
+    }
+
+    /// <summary>필드의 좌우 절반에서 번갈아 목표를 고르는 함수를 만듭니다.</summary>
+    public static Func<Vector2, Vector2> CreateSweepDestination(
+        Func<Bounds> getBounds, bool moveRight)
+    {
+        Vector2? destination = null;
+
+        return currentCenter =>
+        {
+            Bounds bounds = getBounds();
+            bool reached = destination.HasValue
+                && currentCenter.Equals(destination.Value);
+            if (reached)
+            {
+                moveRight = !moveRight;
+            }
+
+            if (!destination.HasValue || reached
+                || destination.Value.x < bounds.min.x || destination.Value.x > bounds.max.x
+                || destination.Value.y < bounds.min.y || destination.Value.y > bounds.max.y)
+            {
+                float x = moveRight
+                    ? UnityEngine.Random.Range(bounds.center.x, bounds.max.x)
+                    : UnityEngine.Random.Range(bounds.min.x, bounds.center.x);
+                float y = UnityEngine.Random.Range(bounds.min.y, bounds.max.y);
+                destination = new Vector2(x, y);
+            }
+
+            return destination.Value;
+        };
     }
 
     /// <summary>보스 기준 시작 위치에서 조율 패턴의 서치라이트를 시작합니다.</summary>
@@ -69,11 +109,11 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
     }
 
     private bool TryBeginTracking(
-        Transform player, bool coordinated, Func<Vector2, bool> isSightBlocked = null,
-        Func<Vector2, Vector2> selectDestination = null)
+        Transform player, bool coordinated, Func<Vector2, Vector2> selectDestination,
+        Func<Vector2, bool> isSightBlocked = null)
     {
         if (!isActiveAndEnabled || visual == null || freezePattern == null
-            || player == null || IsRunning)
+            || player == null || selectDestination == null || IsRunning)
         {
             return false;
         }
@@ -153,8 +193,7 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
             return;
         }
 
-        Vector2 destination = selectTrackingDestination?.Invoke(center)
-            ?? (Vector2)target.position;
+        Vector2 destination = selectTrackingDestination(center);
         center = Vector2.MoveTowards(center, destination, trackingSpeed * deltaTime);
 
         radius = Mathf.MoveTowards(
@@ -195,7 +234,7 @@ public sealed class HeadBossSearchlightPattern : MonoBehaviour
 
         isCentering = false;
         isCaptured = true;
-        freezePattern.BeginDetection(center, radius, isSightBlocked);
+        freezePattern.BeginDetection(center, radius, visual, isSightBlocked);
 
         if (!freezePattern.IsDetecting)
         {

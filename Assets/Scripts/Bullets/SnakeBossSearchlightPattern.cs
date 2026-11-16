@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>뱀 보스의 두 서치라이트를 시작하고 포착과 합류를 조율합니다.</summary>
@@ -7,11 +8,18 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
     [SerializeField] private HeadBossSearchlightPattern right;
     [SerializeField] private HeadBossFreezePattern freezePattern;
     [SerializeField] private SnakeBossSearchlightRocks rocks;
+    [SerializeField] private HeadBossSearchlightVisual leftVisual;
+    [SerializeField] private HeadBossSearchlightVisual rightVisual;
     [SerializeField] private Transform leftEye;
     [SerializeField] private Transform rightEye;
 
     // ##TEMP 다른 원이 포착한 원에 합류하는 시간.
     [SerializeField, Min(0.01f)] private float joinDuration = 0.12f;
+
+    private readonly List<Vector4> leftShadow =
+        new List<Vector4>(SnakeBossSearchlightRocks.MAX_SHADOW_VERTICES);
+    private readonly List<Vector4> rightShadow =
+        new List<Vector4>(SnakeBossSearchlightRocks.MAX_SHADOW_VERTICES);
 
     private PlayerHealth player;
     private SpriteRenderer field;
@@ -29,14 +37,12 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
     public void Initialize(
         PlayerHealth player,
         SpriteRenderer field,
-        BulletRegistry registry,
-        Transform bulletPoolParent,
         FieldManager fieldManager)
     {
         this.player = player;
         this.field = field;
         this.fieldManager = fieldManager;
-        freezePattern.Initialize(player, field, registry, bulletPoolParent);
+        freezePattern.Initialize(player);
         rocks.Initialize();
     }
 
@@ -52,15 +58,16 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
 
         Transform target = player.transform;
         Vector2 playerPosition = target.position;
-        previousFieldBounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
+        previousFieldBounds = GetCurrentFieldBounds();
 
         rocks.SpawnAround(playerPosition, previousFieldBounds);
+        RefreshShadows();
         if (!left.BeginCoordinatedTracking(
-                target, position => rocks.BlocksSight(leftEye.position, position),
-                CreateSweepDestination(moveRight: true))
+                target, position => SnakeBossSearchlightRocks.BlocksSight(leftShadow, position),
+                HeadBossSearchlightPattern.CreateSweepDestination(GetCurrentFieldBounds, moveRight: true))
             || !right.BeginCoordinatedTracking(
-                target, position => rocks.BlocksSight(rightEye.position, position),
-                CreateSweepDestination(moveRight: false)))
+                target, position => SnakeBossSearchlightRocks.BlocksSight(rightShadow, position),
+                HeadBossSearchlightPattern.CreateSweepDestination(GetCurrentFieldBounds, moveRight: false)))
         {
             StopTracking();
             return;
@@ -70,33 +77,9 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         TrySelectCapture(playerPosition);
     }
 
-    private System.Func<Vector2, Vector2> CreateSweepDestination(bool moveRight)
+    private Bounds GetCurrentFieldBounds()
     {
-        Vector2? destination = null;
-
-        return currentCenter =>
-        {
-            Bounds bounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
-            bool reached = destination.HasValue && currentCenter.Equals(destination.Value);
-            if (reached)
-            {
-                moveRight = !moveRight;
-            }
-
-            if (!destination.HasValue || reached
-                || destination.Value.x < bounds.min.x || destination.Value.x > bounds.max.x
-                || destination.Value.y < bounds.min.y || destination.Value.y > bounds.max.y)
-            {
-                float x = moveRight
-                    ? Random.Range(bounds.center.x, bounds.max.x)
-                    : Random.Range(bounds.min.x, bounds.center.x);
-
-                float y = Random.Range(bounds.min.y, bounds.max.y);
-                destination = new Vector2(x, y);
-            }
-
-            return destination.Value;
-        };
+        return fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
     }
 
     private void Update()
@@ -113,13 +96,14 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
             return;
         }
 
-        Bounds currentBounds = fieldManager != null ? fieldManager.CurrentBounds : field.bounds;
+        Bounds currentBounds = GetCurrentFieldBounds();
         if (!previousFieldBounds.Equals(currentBounds))
         {
             rocks.ReturnOutside(currentBounds);
             previousFieldBounds = currentBounds;
         }
 
+        RefreshShadows();
         if (captured == null)
         {
             left.AdvanceCoordinated(deltaTime);
@@ -145,6 +129,14 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         {
             AdvanceJoin(deltaTime);
         }
+    }
+
+    private void RefreshShadows()
+    {
+        rocks.BuildShadowTriangles(leftEye.position, leftShadow);
+        rocks.BuildShadowTriangles(rightEye.position, rightShadow);
+        leftVisual?.SetShadowTriangles(leftShadow);
+        rightVisual?.SetShadowTriangles(rightShadow);
     }
 
     private void TrySelectCapture(Vector2 playerPosition)
@@ -195,9 +187,34 @@ public sealed class SnakeBossSearchlightPattern : MonoBehaviour
         left?.StopTracking();
         right?.StopTracking();
         rocks?.ReturnAll();
+        leftShadow.Clear();
+        rightShadow.Clear();
+        leftVisual?.SetShadowTriangles(leftShadow);
+        rightVisual?.SetShadowTriangles(rightShadow);
         captured = null;
         joining = null;
         IsRunning = false;
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!Application.isPlaying || !IsRunning || rocks == null)
+        {
+            return;
+        }
+
+        if (leftEye != null && left != null && left.IsRunning
+            && (captured == null || captured == left))
+        {
+            SnakeBossSearchlightRocks.DrawShadowGizmos(leftShadow, left.Center, left.Radius, Color.cyan);
+        }
+
+        if (rightEye != null && right != null && right.IsRunning
+            && (captured == null || captured == right))
+        {
+            SnakeBossSearchlightRocks.DrawShadowGizmos(rightShadow, right.Center, right.Radius,
+                new Color(1f, 0.55f, 0.15f));
+        }
     }
 
     private void OnDisable()

@@ -2,44 +2,43 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>서치라이트 안의 이동을 감지하고 굳기 부채꼴을 발사합니다.</summary>
+/// <summary>서치라이트 안의 이동을 감지하고 굳은 플레이어에게 빛 원의 초점을 맞춥니다.</summary>
 public sealed class HeadBossFreezePattern : MonoBehaviour
 {
-    [SerializeField] private Transform firePoint;
-    [SerializeField] private TestBullet bulletPrefab;
-
     // ##TEMP 승인한 감지 시작값.
     [SerializeField, Min(0.01f)] private float duration = 2f;
     [SerializeField, Min(0f)] private float movementThreshold = 0.05f;
     // ##TEMP 이동 거리 비교에 사용하는 시간 구간.
     [SerializeField, Min(0.01f)] private float movementSampleWindow = 0.1f;
+    // ##TEMP 그림자에서 벗어난 뒤 이동 판정을 유예하는 시간.
+    [SerializeField, Min(0f)] private float shadowExitGraceDuration = 0.1f;
 
-    private const int FREEZE_BULLET_COUNT = 3;
-
-    // ##TEMP 미끼 궤도와 가운데 탄의 프로토타입 시작값.
-    [SerializeField, Min(0.01f)] private float decoyClearance = 0.1f;
-    [SerializeField, Range(0.01f, 0.49f)] private float centerArrivalDelay = 0.15f;
-    [SerializeField, Min(0.01f)] private float centerBulletSpeed = 4f;
-    [SerializeField, Min(0.01f)] private float bulletRadius = 0.12f;
+    // ##TEMP 굳기 중 빛 원 반경이 줄어드는 속도. 월드 유닛/초.
+    [SerializeField, Min(0.01f)] private float focusShrinkSpeed = 1.5f;
+    // ##TEMP 머리 표시의 움찔 거리와 복원 시간.
+    [SerializeField] private Transform headVisual;
+    [SerializeField, Min(0f)] private float recoilDistance = 0.12f;
+    [SerializeField, Min(0.01f)] private float recoilDuration = 0.15f;
 
     private PlayerHealth playerHealth;
     private PlayerMovement playerMovement;
     private PlayerLight playerLight;
     private PlayerPerfectDodge perfectDodge;
-    private SpriteRenderer playfield;
-    private BulletRegistry bulletRegistry;
-    private Transform bulletParent;
-    private ComponentPool<TestBullet> pool;
-
-    private readonly HashSet<TestBullet> activeVolleyBullets = new HashSet<TestBullet>();
-
-    private bool isVolleyRunning;
+    private HeadBossSearchlightVisual focusVisual;
+    private Vector2 focusCenter;
+    private float focusStartRadius;
+    private double focusStartedAt;
+    private double focusContactAt;
+    private double focusEndsAt;
+    private Vector3 headRestPosition;
+    private float recoilRemaining;
 
     private Vector2 detectionCenter;
-    private float detectionRadiusSquared;
+    private float detectionRadius;
     private double detectionStartedAt;
     private Func<Vector2, bool> isSightBlocked;
     private bool wasSightBlocked;
+    private double shadowExitGraceEndsAt;
 
     private readonly Queue<(double Time, Vector2 Position)> movementSamples =
         new Queue<(double Time, Vector2 Position)>();
@@ -60,37 +59,30 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     /// <summary>이번 감지에서 플레이어 이동을 잠갔는지 나타냅니다.</summary>
     public bool HasTriggeredFreeze => hasTriggeredFreeze;
 
-    /// <summary>
-    /// 이동 감지와 굳기 탄 발사에 필요한 씬 참조를 연결합니다.
-    /// HeadBossPattern.Initialize가 호출합니다.
-    /// </summary>
-    public void Initialize(
-        PlayerHealth player,
-        SpriteRenderer field,
-        BulletRegistry registry,
-        Transform poolParent)
+    /// <summary>이동 감지와 초점 판정에 필요한 플레이어 참조를 연결합니다.</summary>
+    public void Initialize(PlayerHealth player)
     {
         playerHealth = player;
         playerMovement = player != null ? player.GetComponent<PlayerMovement>() : null;
         playerLight = player != null ? player.GetComponent<PlayerLight>() : null;
         perfectDodge = player != null ? player.GetComponent<PlayerPerfectDodge>() : null;
-        playfield = field;
-        bulletRegistry = registry;
-        bulletParent = poolParent;
     }
 
     /// <summary>포착된 서치라이트 원을 기준으로 이동 감지를 시작합니다.</summary>
-    public void BeginDetection(Vector2 center, float radius, Func<Vector2, bool> isSightBlocked = null)
+    public void BeginDetection(
+        Vector2 center, float radius, HeadBossSearchlightVisual visual,
+        Func<Vector2, bool> isSightBlocked = null)
     {
         if (!isActiveAndEnabled || isDetecting)
         {
             return;
         }
 
-        if (playerHealth == null || playerMovement == null)
+        if (playerHealth == null || playerMovement == null || playerLight == null
+            || perfectDodge == null || visual == null)
         {
             PlayLog.Write("HeadBoss",
-                "서치라이트 이동 감지의 플레이어와 이동 컴포넌트를 확인해주세요.",
+                "서치라이트 초점 판정의 플레이어와 표시 참조를 확인해주세요.",
                 LogType.Error, this);
             return;
         }
@@ -101,10 +93,12 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         }
 
         detectionCenter = center;
-        detectionRadiusSquared = radius * radius;
+        detectionRadius = radius;
+        focusVisual = visual;
         detectionStartedAt = Time.timeAsDouble;
         this.isSightBlocked = isSightBlocked;
         wasSightBlocked = isSightBlocked?.Invoke(playerHealth.transform.position) == true;
+        shadowExitGraceEndsAt = 0d;
 
         movementSamples.Clear();
         previousMovementSample = (0d, (Vector2)playerHealth.transform.position);
@@ -128,14 +122,9 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
             return;
         }
 
-        if (isVolleyRunning)
+        if (hasTriggeredFreeze)
         {
-            if (activeVolleyBullets.Count == 0)
-            {
-                StopDetection();
-                isComplete = true;
-            }
-
+            AdvanceFocus();
             return;
         }
 
@@ -147,24 +136,29 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
             return;
         }
 
-        if (hasTriggeredFreeze)
-        {
-            return;
-        }
-
         Vector2 playerPosition = playerHealth.transform.position;
         bool sightBlocked = isSightBlocked?.Invoke(playerPosition) == true;
         if (sightBlocked || wasSightBlocked)
         {
             movementSamples.Clear();
             previousMovementSample = (elapsed, playerPosition);
+            if (!sightBlocked)
+            {
+                shadowExitGraceEndsAt = elapsed + shadowExitGraceDuration;
+            }
+
             wasSightBlocked = sightBlocked;
             return;
         }
 
         bool hasMoved = HasMovedWithinWindow(elapsed, playerPosition);
+        if (elapsed < shadowExitGraceEndsAt)
+        {
+            return;
+        }
+
         bool isInsideCircle =
-            (playerPosition - detectionCenter).sqrMagnitude <= detectionRadiusSquared;
+            (playerPosition - detectionCenter).sqrMagnitude <= detectionRadius * detectionRadius;
 
         if (!isInsideCircle || !hasMoved)
         {
@@ -173,85 +167,110 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
 
         hasTriggeredFreeze = true;
         movementSamples.Clear();
-        playerMovement.SetFrozen(true);
         PlayLog.Write("HeadBoss", "Freeze Start");
-        TryStartVolley();
+        BeginFocus(playerPosition);
     }
 
-    private void TryStartVolley()
+    private void BeginFocus(Vector2 playerPosition)
     {
-        if (firePoint == null || bulletPrefab == null || playerLight == null || perfectDodge == null
-            || playfield == null || bulletRegistry == null || bulletParent == null)
+        focusCenter = playerPosition;
+        float coreRadius = playerLight.CoreRadius;
+        float grace = perfectDodge.PerfectGraceSeconds;
+        focusStartRadius = Mathf.Max(detectionRadius, coreRadius + focusShrinkSpeed * grace);
+        focusStartedAt = Time.timeAsDouble;
+        focusContactAt = focusStartedAt + (focusStartRadius - coreRadius) / focusShrinkSpeed;
+        focusEndsAt = Math.Min(focusContactAt + grace,
+            focusStartedAt + focusStartRadius / focusShrinkSpeed);
+
+        playerMovement.SetFrozen(true);
+        perfectDodge.RegisterSearchlightPerfect(GetFocusSecondsToContact, CompleteFocusPerfect);
+        focusVisual.Show(focusCenter, focusStartRadius);
+        focusVisual.SetFocusProgress(0f);
+    }
+
+    private void AdvanceFocus()
+    {
+        double now = Time.timeAsDouble;
+        if (now >= focusEndsAt)
         {
-            PlayLog.Write("HeadBoss", "굳기 부채꼴의 발사점·탄·씬 참조를 확인해주세요.", LogType.Error, this);
+            FinishFocus(success: false);
             return;
         }
 
-        Vector3 origin = firePoint.position;
-        Vector2 toPlayer = (Vector2)playerHealth.transform.position - (Vector2)origin;
-        float distance = toPlayer.magnitude;
-        float outerPerfectRadius =
-            playerLight.CoreRadius + bulletRadius + perfectDodge.PerfectTolerance;
-        float decoyDistance = outerPerfectRadius + decoyClearance;
-        float haloRadius = playerLight.HaloRadius;
+        double elapsed = now - focusStartedAt;
+        float radius = Mathf.Max(0f, focusStartRadius - focusShrinkSpeed * (float)elapsed);
+        float progress = Mathf.Clamp01((float)(elapsed / (focusEndsAt - focusStartedAt)));
+        focusVisual.Show(focusCenter, radius);
+        focusVisual.SetFocusProgress(progress);
+    }
 
-        float centerEntryTime = (distance - outerPerfectRadius) / centerBulletSpeed;
-        float decoyClosestTime = centerEntryTime - centerArrivalDelay;
-
-        // 미끼 궤도나 도착 순서를 확보할 수 없으면 발사를 생략한다.
-        if (distance <= decoyDistance || decoyDistance >= haloRadius
-            || decoyClosestTime <= 0f)
+    private double GetFocusSecondsToContact()
+    {
+        double now = Time.timeAsDouble;
+        // 원이 완전히 닫히면 입력 Update가 먼저 실행돼도 판정을 닫는다.
+        if (now >= focusStartedAt + focusStartRadius / focusShrinkSpeed)
         {
-            PlayLog.Write("HeadBoss", "Freeze Fan Skipped (distance, halo or timing)");
+            return double.NaN;
+        }
+
+        return focusContactAt - now;
+    }
+
+    private void CompleteFocusPerfect()
+    {
+        FinishFocus(success: true);
+    }
+
+    private void FinishFocus(bool success)
+    {
+        PlayLog.Write("HeadBoss", success ? "Searchlight Focus Perfect" : "Searchlight Focus Failed");
+        StopDetection();
+        isComplete = true;
+
+        if (success)
+        {
+            playerLight.FlashSearchlightPerfect();
+            BeginRecoil();
+        }
+        else
+        {
+            playerHealth.TryTakeHit(1);
+        }
+    }
+
+    private void BeginRecoil()
+    {
+        if (headVisual == null)
+        {
             return;
         }
 
-        Vector2 forward = toPlayer / distance;
-        Vector2 sideways = new Vector2(-forward.y, forward.x);
+        RestoreHeadPose();
+        headRestPosition = headVisual.localPosition;
+        recoilRemaining = recoilDuration;
+        headVisual.localPosition = headRestPosition + Vector3.up * recoilDistance;
+    }
 
-        float sideRatio = decoyDistance / distance;
-        float forwardRatio = Mathf.Sqrt(1f - sideRatio * sideRatio);
-        float decoyClosestTravel = distance * forwardRatio;
-        float decoySpeed = decoyClosestTravel / decoyClosestTime;
-
-        // 미끼는 최근접 지점을 지나 헤일로 바깥까지 진행한다.
-        float haloExitRadius = haloRadius + bulletRadius;
-        float travelPastClosest = Mathf.Sqrt(
-            haloExitRadius * haloExitRadius - decoyDistance * decoyDistance);
-        float decoyLifetime = (decoyClosestTravel + travelPastClosest) / decoySpeed;
-
-        if (pool == null)
+    private void LateUpdate()
+    {
+        if (recoilRemaining <= 0f || headVisual == null)
         {
-            pool = new ComponentPool<TestBullet>(
-                new TestBulletFactory(bulletPrefab, bulletParent),
-                FREEZE_BULLET_COUNT,
-                bulletParent);
+            return;
         }
 
-        isVolleyRunning = true;
-        FireFreezeBullet(origin, forward * forwardRatio - sideways * sideRatio,
-            decoySpeed, decoyLifetime);
-        FireFreezeBullet(origin, forward, centerBulletSpeed, distance / centerBulletSpeed);
-        FireFreezeBullet(origin, forward * forwardRatio + sideways * sideRatio,
-            decoySpeed, decoyLifetime);
-        PlayLog.Write("HeadBoss", $"Freeze Fan Shoot ({FREEZE_BULLET_COUNT} bullets)");
+        recoilRemaining = Mathf.Max(0f, recoilRemaining - Time.deltaTime);
+        headVisual.localPosition = headRestPosition
+            + Vector3.up * (recoilDistance * recoilRemaining / recoilDuration);
     }
 
-    private void FireFreezeBullet(
-        Vector3 origin, Vector2 direction, float speed, float lifetime)
+    private void RestoreHeadPose()
     {
-        TestBullet bullet = pool.Rent(instance => instance.Prepare(
-            origin, direction, speed, lifetime, bulletRadius,
-            playfield.bounds, pool, ReturnVolleyBullet,
-            playerHealth, bulletRegistry, hitOnce: true));
+        if (recoilRemaining > 0f && headVisual != null)
+        {
+            headVisual.localPosition = headRestPosition;
+        }
 
-        activeVolleyBullets.Add(bullet);
-    }
-
-    private void ReturnVolleyBullet(TestBullet bullet)
-    {
-        activeVolleyBullets.Remove(bullet);
-        pool.Return(bullet);
+        recoilRemaining = 0f;
     }
 
     private bool HasMovedWithinWindow(double elapsed, Vector2 position)
@@ -300,9 +319,23 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         }
 
         movementSamples.Clear();
-        isVolleyRunning = false;
+        if (hasTriggeredFreeze)
+        {
+            if (perfectDodge != null)
+            {
+                perfectDodge.UnregisterSearchlightPerfect(GetFocusSecondsToContact);
+            }
+
+            if (focusVisual != null)
+            {
+                focusVisual.Hide();
+            }
+        }
+
+        focusVisual = null;
         isSightBlocked = null;
         wasSightBlocked = false;
+        shadowExitGraceEndsAt = 0d;
         isDetecting = false;
         hasTriggeredFreeze = false;
         isComplete = false;
@@ -311,22 +344,7 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
     private void OnDisable()
     {
         StopDetection();
-
-        // 종료 연출에 넘기지 못한 탄은 컴포넌트 비활성화 때 회수한다.
-        foreach (TestBullet bullet in new List<TestBullet>(activeVolleyBullets))
-        {
-            if (bullet != null)
-            {
-                bullet.Expire();
-            }
-        }
-
-        activeVolleyBullets.Clear();
-    }
-
-    private void OnDestroy()
-    {
-        pool?.Clear();
+        RestoreHeadPose();
     }
 
     private void OnValidate()
@@ -334,9 +352,9 @@ public sealed class HeadBossFreezePattern : MonoBehaviour
         duration = Mathf.Max(0.01f, duration);
         movementThreshold = Mathf.Max(0f, movementThreshold);
         movementSampleWindow = Mathf.Max(0.01f, movementSampleWindow);
-        decoyClearance = Mathf.Max(0.01f, decoyClearance);
-        centerArrivalDelay = Mathf.Clamp(centerArrivalDelay, 0.01f, 0.49f);
-        centerBulletSpeed = Mathf.Max(0.01f, centerBulletSpeed);
-        bulletRadius = Mathf.Max(0.01f, bulletRadius);
+        shadowExitGraceDuration = Mathf.Max(0f, shadowExitGraceDuration);
+        focusShrinkSpeed = Mathf.Max(0.01f, focusShrinkSpeed);
+        recoilDistance = Mathf.Max(0f, recoilDistance);
+        recoilDuration = Mathf.Max(0.01f, recoilDuration);
     }
 }

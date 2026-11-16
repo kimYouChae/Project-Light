@@ -6,6 +6,8 @@ public sealed class PlayerBullet : MonoBehaviour
 {
     [SerializeField] private Transform visual;
     [SerializeField] private UnityEngine.Rendering.Universal.Light2D attackLight;
+    // ##TEMP 돌진 시작 위치에 도착했을 때의 빛 번짐 시간.
+    [SerializeField, Min(0.01f)] private float dashFlashDuration = 0.12f;
     private float baseLightIntensity;
     private bool lightIntensityCached;
     private float baseLightOuterRadius;
@@ -19,9 +21,14 @@ public sealed class PlayerBullet : MonoBehaviour
     private float bulletRadius;
     private int damage;
     private BossHealth targetBoss;
+    private PlayerHealth sourcePlayer;
     private ComponentPool<PlayerBullet> pool;
     private Action<PlayerBullet> returned;
     private bool prepared;
+    private bool redirected;
+    private float dashFlashRemaining;
+    private float dashFlashIntensity;
+    private float dashFlashRadius;
 
     // 이 탄의 직접 적중 알림을 전달할 컴포넌트
     private PlayerAttackEvents attackEvents;
@@ -43,9 +50,12 @@ public sealed class PlayerBullet : MonoBehaviour
         Action<PlayerBullet> onReturned,
         PlayerAttackEvents sourceEvents,
         AttackTargetType sourceAttackType,
-        float sightRadiusMultiplier = 1f)
+        float sightRadiusMultiplier = 1f,
+        PlayerHealth sourcePlayer = null)
     {
         startPosition = start;
+        redirected = false;
+        dashFlashRemaining = 0f;
         endPosition = target.transform.position;
         Vector2 direction = endPosition - startPosition;
         Vector2 normalized = direction.normalized;
@@ -72,6 +82,7 @@ public sealed class PlayerBullet : MonoBehaviour
         }
         damage = hitDamage;
         targetBoss = target;
+        this.sourcePlayer = sourcePlayer;
         pool = sourcePool;
         returned = onReturned;
         transform.position = startPosition;
@@ -136,14 +147,19 @@ public sealed class PlayerBullet : MonoBehaviour
     private void Update()
     {
         // 필드 시간이 정지된 동안 이동·공격·판정·획득을 처리하지 않는다.
-        if (Time.timeScale <= 0f)
+        if (Time.timeScale <= 0f || !prepared
+            || (sourcePlayer != null && sourcePlayer.IsFieldShrinkCutsceneActive))
         {
             return;
         }
 
-        if (!prepared)
+        if (dashFlashRemaining > 0f)
+        {
+            AdvanceDashFlash();
             return;
-        if (targetBoss == null || targetBoss.IsDefeated)
+        }
+
+        if (!redirected && (targetBoss == null || targetBoss.IsDefeated))
         {
             ReturnToPool();
             return;
@@ -153,7 +169,7 @@ public sealed class PlayerBullet : MonoBehaviour
         float t = Mathf.Clamp01(elapsed / flightDuration);
         transform.position = Vector3.Lerp(startPosition, endPosition, t)
             + arcDirection * (4f * arcHeight * t * (1f - t));
-        if (HitsBoss(previousPosition, transform.position))
+        if (!redirected && HitsBoss(previousPosition, transform.position))
         {
             // 직접 피해가 적용된 경우에만 적중 효과 알림을 보낸다.
             if (targetBoss.TryTakePlayerAttackDamage(damage)
@@ -166,8 +182,45 @@ public sealed class PlayerBullet : MonoBehaviour
         }
         else if (t >= 1f)
         {
-            ReturnToPool();
+            if (redirected && attackLight != null)
+            {
+                dashFlashRemaining = dashFlashDuration;
+                dashFlashIntensity = attackLight.intensity;
+                dashFlashRadius = attackLight.pointLightOuterRadius;
+            }
+            else
+            {
+                ReturnToPool();
+            }
         }
+    }
+
+    /// <summary>해당 보스를 향하던 탄을 돌진 시작 위치로 보냅니다.</summary>
+    public void RedirectToDashOrigin(BossHealth boss, Vector3 headPosition)
+    {
+        if (!prepared || redirected || targetBoss != boss)
+            return;
+
+        redirected = true;
+        startPosition = transform.position;
+        endPosition = headPosition;
+        Vector2 direction = endPosition - startPosition;
+        Vector2 normal = direction.normalized;
+        Vector3 bend = new Vector3(-normal.y, normal.x, 0f);
+        arcDirection = Vector3.Dot(bend, arcDirection) < 0f ? -bend : bend;
+        arcHeight *= Mathf.Clamp01(1f - elapsed / flightDuration);
+        flightDuration = Mathf.Max(0.01f, flightDuration - elapsed);
+        elapsed = 0f;
+    }
+
+    private void AdvanceDashFlash()
+    {
+        dashFlashRemaining = Mathf.Max(0f, dashFlashRemaining - Time.deltaTime);
+        float progress = 1f - dashFlashRemaining / dashFlashDuration;
+        attackLight.intensity = dashFlashIntensity * (1f - progress);
+        attackLight.pointLightOuterRadius = dashFlashRadius * (1f + progress);
+        if (dashFlashRemaining <= 0f)
+            ReturnToPool();
     }
 
     private bool HitsBoss(Vector2 from, Vector2 to)
@@ -192,6 +245,7 @@ public sealed class PlayerBullet : MonoBehaviour
         Action<PlayerBullet> callback = returned;
         returned = null;
         targetBoss = null;
+        sourcePlayer = null;
         callback?.Invoke(this);
         pool.Return(this);
     }

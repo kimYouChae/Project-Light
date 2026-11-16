@@ -84,7 +84,7 @@ public sealed class PlayerStats : MonoBehaviour
     {
         if (history != null)
         {
-            history.RegisterChanged(RecalculateStats);
+            history.RegisterChanged(OnRewardHistoryChanged);
         }
 
         RecalculateStats();
@@ -94,8 +94,19 @@ public sealed class PlayerStats : MonoBehaviour
     {
         if (history != null)
         {
-            history.UnregisterChanged(RecalculateStats);
+            history.UnregisterChanged(OnRewardHistoryChanged);
         }
+    }
+
+    private void OnRewardHistoryChanged()
+    {
+        RecalculateStats();
+        PlayLog.Write("Reward",
+            $"Stats (records={history.Records.Count}, moveSpeed={MoveSpeed:F3}, "
+            + $"bulletSpeed={BulletSpeed:F3}, bulletRadius={BulletRadius:F3}, "
+            + $"maxHaloRadius={MaxHaloRadius:F3}, maxHealth={MaxHealth}, "
+            + $"gaugePerBullet={GaugePerBullet:F3}, frenzyDuration={FrenzyDuration:F3}, "
+            + $"perfectInvulnerability={PerfectInvulnerability:F3})");
     }
 
     private void RecalculateStats()

@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 4717122009106751244}
   - component: {fileID: 3806396743330771866}
-  - component: {fileID: 99101}
   m_Layer: 0
   m_Name: SearchlightRock
   m_TagString: Untagged
@@ -92,57 +91,3 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
---- !u!114 &99101
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1379972808060869711}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7db70e0ea77f5ac47a8f4565a9406397, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.2D.Runtime::UnityEngine.Rendering.Universal.ShadowCaster2D
-  m_ComponentVersion: 5
-  m_HasRenderer: 1
-  m_UseRendererSilhouette: 0
-  m_CastsShadows: 1
-  m_SelfShadows: 0
-  m_ApplyToSortingLayers: 00000000
-  m_ShadowCastingSource: 1
-  m_CastingOption: 1
-  m_ShapePathHash: 1
-  m_ShapePath:
-  - {x: 0.5, y: 0, z: 0}
-  - {x: 0.490393, y: 0.097545, z: 0}
-  - {x: 0.46194, y: 0.191342, z: 0}
-  - {x: 0.415735, y: 0.277785, z: 0}
-  - {x: 0.353553, y: 0.353553, z: 0}
-  - {x: 0.277785, y: 0.415735, z: 0}
-  - {x: 0.191342, y: 0.46194, z: 0}
-  - {x: 0.097545, y: 0.490393, z: 0}
-  - {x: 0, y: 0.5, z: 0}
-  - {x: -0.097545, y: 0.490393, z: 0}
-  - {x: -0.191342, y: 0.46194, z: 0}
-  - {x: -0.277785, y: 0.415735, z: 0}
-  - {x: -0.353553, y: 0.353553, z: 0}
-  - {x: -0.415735, y: 0.277785, z: 0}
-  - {x: -0.46194, y: 0.191342, z: 0}
-  - {x: -0.490393, y: 0.097545, z: 0}
-  - {x: -0.5, y: 0, z: 0}
-  - {x: -0.490393, y: -0.097545, z: 0}
-  - {x: -0.46194, y: -0.191342, z: 0}
-  - {x: -0.415735, y: -0.277785, z: 0}
-  - {x: -0.353553, y: -0.353553, z: 0}
-  - {x: -0.277785, y: -0.415735, z: 0}
-  - {x: -0.191342, y: -0.46194, z: 0}
-  - {x: -0.097545, y: -0.490393, z: 0}
-  - {x: -0, y: -0.5, z: 0}
-  - {x: 0.097545, y: -0.490393, z: 0}
-  - {x: 0.191342, y: -0.46194, z: 0}
-  - {x: 0.277785, y: -0.415735, z: 0}
-  - {x: 0.353553, y: -0.353553, z: 0}
-  - {x: 0.415735, y: -0.277785, z: 0}
-  - {x: 0.46194, y: -0.191342, z: 0}
-  - {x: 0.490393, y: -0.097545, z: 0}

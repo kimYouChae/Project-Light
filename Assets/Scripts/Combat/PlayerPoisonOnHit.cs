@@ -26,7 +26,7 @@ public sealed class PlayerPoisonOnHit : MonoBehaviour
     {
         if (history != null)
         {
-            history.RegisterChanged(RecalculateStacks);
+            history.RegisterChanged(OnRewardHistoryChanged);
         }
 
         RecalculateStacks();
@@ -41,13 +41,21 @@ public sealed class PlayerPoisonOnHit : MonoBehaviour
     {
         if (history != null)
         {
-            history.UnregisterChanged(RecalculateStacks);
+            history.UnregisterChanged(OnRewardHistoryChanged);
         }
 
         if (attackEvents != null)
         {
             attackEvents.UnregisterHit(OnAttackHit);
         }
+    }
+
+    private void OnRewardHistoryChanged()
+    {
+        RecalculateStacks();
+        PlayLog.Write("Reward",
+            $"Poison Stacks (records={history.Records.Count}, normal={normalStacks}, "
+            + $"enhanced={enhancedStacks}, frenzy={frenzyStacks})");
     }
 
     private void RecalculateStacks()

@@ -22,6 +22,7 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
     }
 
     private PlayerHealth player;
+    private SpriteRenderer field;
     private PatternState state;
 
     /// <summary>머리 보스의 필수 컴포넌트 연결 상태입니다.</summary>
@@ -52,8 +53,9 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
         }
 
         this.player = player;
+        this.field = field;
         fanPattern.Initialize(player, field, registry, bulletPoolParent);
-        freezePattern.Initialize(player, field, registry, bulletPoolParent);
+        freezePattern.Initialize(player);
         dashPattern.Initialize(field);
     }
 
@@ -99,7 +101,7 @@ public sealed class HeadBossPattern : MonoBehaviour, IBossPattern
                 PlayLog.Write("HeadBoss", "Aim Dash Pattern End (returned)");
                 state = PatternState.Searchlight;
                 PlayLog.Write("HeadBoss", "Searchlight Pattern Start");
-                searchlightPattern.BeginTracking(player.transform);
+                searchlightPattern.BeginTracking(player.transform, field);
                 break;
 
             case PatternState.Searchlight when !searchlightPattern.IsRunning:

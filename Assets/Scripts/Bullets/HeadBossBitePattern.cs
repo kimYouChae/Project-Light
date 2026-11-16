@@ -14,7 +14,6 @@ public sealed class HeadBossBitePattern : MonoBehaviour
     [SerializeField, Min(0.01f)] private float liftDuration = 0.25f;
     // ##TEMP 흔들기 프로토타입 시작값.
     [SerializeField, Min(0.02f)] private float shakeInterval = 0.8f;
-    [SerializeField, Min(0.01f)] private float braceWindow = 0.1f;
     [SerializeField, Min(0f)] private float shakeDistance = 0.2f;
     [SerializeField, Min(0.01f)] private float ringStartOffset = 0.6f;
     // ##TEMP 내던지기 프로토타입 시작값.
@@ -31,7 +30,6 @@ public sealed class HeadBossBitePattern : MonoBehaviour
     private float liftElapsed;
     private double roundStartedAt = -1d;
     private int completedShakes;
-    private bool triedBrace;
     private bool braced;
     private Vector2 throwDirection;
     private Vector3 throwStart;
@@ -65,14 +63,13 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         liftElapsed = 0f;
         roundStartedAt = -1d;
         completedShakes = 0;
-        triedBrace = false;
         braced = false;
         throwDirection = direction;
         onLanded = landed;
 
         heldMovement.SetBiteHeld(true);
         PlayLog.Write("HeadBoss", "Bite Start");
-        perfectDodge.RegisterBiteBraceInput(TryBrace);
+        perfectDodge.RegisterBiteBraceInput(GetBraceSecondsToContact, CompleteBrace);
         PlaceAtMouth();
         return true;
     }
@@ -144,7 +141,6 @@ public sealed class HeadBossBitePattern : MonoBehaviour
             }
 
             completedShakes++;
-            triedBrace = false;
             braced = false;
             roundStartedAt = -1d;
             braceRing.enabled = false;
@@ -172,22 +168,21 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         DrawBraceRing(radius);
     }
 
-    private void TryBrace()
+    private double GetBraceSecondsToContact()
     {
-        if (roundStartedAt < 0d || triedBrace || completedShakes >= SHAKE_COUNT)
-        {
-            return;
-        }
-
         double elapsed = Time.timeAsDouble - roundStartedAt;
-        if (elapsed >= shakeInterval)
+        if (roundStartedAt < 0d || elapsed >= shakeInterval
+            || braced || completedShakes >= SHAKE_COUNT)
         {
-            return;
+            return double.NaN;
         }
 
-        triedBrace = true;
-        float strikeTime = shakeInterval * 0.5f;
-        braced = System.Math.Abs(elapsed - strikeTime) <= braceWindow;
+        return shakeInterval * 0.5d - elapsed;
+    }
+
+    private void CompleteBrace()
+    {
+        braced = true;
     }
 
     private void DrawBraceRing(float radius)
@@ -225,7 +220,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         throwElapsed = 0f;
         isThrowing = true;
         PlayLog.Write("HeadBoss", "Bite Throw");
-        perfectDodge.UnregisterBiteBraceInput(TryBrace);
+        perfectDodge.UnregisterBiteBraceInput(GetBraceSecondsToContact);
     }
 
     private void UpdateThrow()
@@ -265,7 +260,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
 
         if (perfectDodge != null)
         {
-            perfectDodge.UnregisterBiteBraceInput(TryBrace);
+            perfectDodge.UnregisterBiteBraceInput(GetBraceSecondsToContact);
         }
 
         if (braceRing != null && braceRing.enabled)
@@ -289,8 +284,4 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         ReleaseHold();
     }
 
-    private void OnValidate()
-    {
-        braceWindow = Mathf.Clamp(braceWindow, 0.01f, shakeInterval * 0.5f);
-    }
 }

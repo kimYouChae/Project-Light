@@ -90,15 +90,19 @@ public sealed class RewardSelectionController : MonoBehaviour
         }
 
         // 보유량이 부족하면 소비와 기록을 모두 진행하지 않는다.
+        int balanceBefore = wallet.Count;
         if (!wallet.TrySpend(investedShards))
         {
             return;
         }
 
+        int balanceAfter = wallet.Count;
         // 이번 선택을 닫아 중복 확정을 막는다.
         isSelectionOpen = false;
         history.AddRecord(card.Id, investedShards);
-        PlayLog.Write("Reward", $"Confirmed (card={card.Id}, shards={investedShards})");
+        PlayLog.Write("Reward",
+            $"Confirmed (card={card.Id}, shards={investedShards}, "
+            + $"balanceBefore={balanceBefore}, balanceAfter={balanceAfter})");
         RestoreTimeScale();
         view.gameObject.SetActive(false);
         selectionConfirmed?.Invoke();

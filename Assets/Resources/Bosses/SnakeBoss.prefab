@@ -59,7 +59,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  - {fileID: 2100000, guid: e17643ab3f4a46f09bf39ff607039e42, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -165,7 +165,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  - {fileID: 2100000, guid: e17643ab3f4a46f09bf39ff607039e42, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -273,7 +273,7 @@ MonoBehaviour:
   m_NormalMapDistance: 3
   m_NormalMapQuality: 2
   m_UseNormalMap: 0
-  m_ShadowsEnabled: 1
+  m_ShadowsEnabled: 0
   m_ShadowIntensity: 1
   m_ShadowSoftness: 0.3
   m_ShadowSoftnessFalloffIntensity: 0.5
@@ -357,7 +357,7 @@ MonoBehaviour:
   m_NormalMapDistance: 3
   m_NormalMapQuality: 2
   m_UseNormalMap: 0
-  m_ShadowsEnabled: 1
+  m_ShadowsEnabled: 0
   m_ShadowIntensity: 1
   m_ShadowSoftness: 0.3
   m_ShadowSoftnessFalloffIntensity: 0.5
@@ -864,7 +864,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  - {fileID: 2100000, guid: 2f3761965b428bd4187597ea3b2cd283, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -955,7 +955,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  - {fileID: 2100000, guid: 2f3761965b428bd4187597ea3b2cd283, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1046,7 +1046,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  - {fileID: 2100000, guid: 2f3761965b428bd4187597ea3b2cd283, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1231,7 +1231,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.2, y: 1.2, z: 1.2}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 9901002}
   m_Father: {fileID: 8315066309986960522}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &3806396743330771866
@@ -1624,6 +1625,7 @@ GameObject:
   - component: {fileID: 99004}
   - component: {fileID: 99005}
   - component: {fileID: 99006}
+  - component: {fileID: 99007}
   m_Layer: 0
   m_Name: SnakeBoss
   m_TagString: Untagged
@@ -1884,7 +1886,6 @@ MonoBehaviour:
   liftHeight: 0.5
   liftDuration: 0.25
   shakeInterval: 0.8
-  braceWindow: 0.1
   shakeDistance: 0.2
   ringStartOffset: 0.6
   throwDistance: 1.5
@@ -1912,6 +1913,7 @@ MonoBehaviour:
   wavePattern: {fileID: 8570025470103849564}
   searchlightPattern: {fileID: 99001}
   tailStabPattern: {fileID: 99006}
+  shrinkCutsceneVisual: {fileID: 99007}
   laneAimDelay: 3.5
   waveSpreadCount: 3
   waveSpreadMinInterval: 0.8
@@ -1983,6 +1985,8 @@ MonoBehaviour:
   right: {fileID: 99003}
   freezePattern: {fileID: 99004}
   rocks: {fileID: 99005}
+  leftVisual: {fileID: 99014}
+  rightVisual: {fileID: 99024}
   leftEye: {fileID: 4435577629348892749}
   rightEye: {fileID: 2148005076798624594}
   joinDuration: 0.12
@@ -2038,15 +2042,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: be037b7501a365e49bcf3c347b346377, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HeadBossFreezePattern
-  firePoint: {fileID: 4454444498022295112}
-  bulletPrefab: {fileID: 3014184059525224061, guid: 4eca56270638fb44a86153dc241fbf42, type: 3}
   duration: 2
   movementThreshold: 0.05
   movementSampleWindow: 0.1
-  decoyClearance: 0.1
-  centerArrivalDelay: 0.15
-  centerBulletSpeed: 3.1
-  bulletRadius: 0.12
+  focusShrinkSpeed: 1.5
+  headVisual: {fileID: 4717122009106751244}
+  recoilDistance: 0.12
+  recoilDuration: 0.15
 --- !u!114 &99005
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2060,9 +2062,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SnakeBossSearchlightRocks
   rockPrefab: {fileID: 3806396743330771866, guid: 3c429e94b7674348b96b4acdcf0021dc, type: 3}
+  shadowLength: 1
   rockCount: 3
   spawnDistance: 3
   rockSize: {x: 1, y: 1}
+--- !u!114 &99007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7691327090667390876}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68212266f6554f8db79872b30b121f84, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SnakeBossShrinkCutsceneVisual
+  bodySegments:
+  - {fileID: 720000000000000002}
+  - {fileID: 720000000000000005}
+  - {fileID: 720000000000000008}
+  shakeDistance: 0.08
+  bodySpacing: 0.65
 --- !u!114 &99006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2081,6 +2102,7 @@ MonoBehaviour:
   tailSize: {x: 1, y: 2.5}
   initialPoolCount: 1
   slowLeadDistance: 2
+  slowFullSpeedOffset: 0.5
   slowTimeScale: 0.25
   approachingColor: {r: 1, g: 0.3, b: 0.2, a: 1}
   readyColor: {r: 1, g: 0.9, b: 0.35, a: 1}
@@ -2293,3 +2315,94 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!1 &9901001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9901002}
+  - component: {fileID: 9901003}
+  m_Layer: 0
+  m_Name: HeadGlow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9901002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9901001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4717122009106751244}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &9901003
+SpriteRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9901001}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 2a1166e2d0799c244bb211d3d67ac3a2, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 9
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: 3fcca35525514672b2b7402a44404eb9, type: 3}
+  m_Color: {r: 0.78, g: 0.45, b: 1, a: 0.62}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0

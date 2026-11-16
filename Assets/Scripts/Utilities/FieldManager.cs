@@ -21,6 +21,8 @@ public sealed class FieldManager : Singleton<FieldManager>
     private bool isActive;
     private bool hasShrunk;
     private System.Action<Bounds> onBoundsChanged;
+    private System.Action<float> onCutsceneProgress;
+    private System.Action onCutsceneFinished;
     private bool isShrinking;
     private Vector3 shrinkStartScale;
     private double shrinkStartedAt;
@@ -46,11 +48,14 @@ public sealed class FieldManager : Singleton<FieldManager>
 
     /// <summary>전투 시작 시 필드의 크기와 스케일을 저장합니다.</summary>
     public void BeginShrinkSequence(
-        PlayerMovement player, System.Action<Bounds> onBoundsChanged = null)
+        PlayerMovement player, System.Action<Bounds> onBoundsChanged = null,
+        System.Action<float> onCutsceneProgress = null, System.Action onCutsceneFinished = null)
     {
         EndShrinkSequence();
         playerMovement = player;
         this.onBoundsChanged = onBoundsChanged;
+        this.onCutsceneProgress = onCutsceneProgress;
+        this.onCutsceneFinished = onCutsceneFinished;
         originalScale = playfield.transform.localScale;
         hasOriginalScale = true;
         originalSize = playfield.bounds.size;
@@ -72,13 +77,22 @@ public sealed class FieldManager : Singleton<FieldManager>
             return;
         }
 
-        if (warningStage != 0 && !isShrinking
-            && Time.timeAsDouble >= warningEndsAt)
+        if (warningStage != 0 && !isShrinking)
         {
-            isShrinking = true;
-            shrinkStartedAt = Time.timeAsDouble;
-            shrinkStartScale = playfield.transform.localScale;
-            PlayLog.Write("Field", $"Shrink Move Start (stage={warningStage})");
+            float remaining = (float)(warningEndsAt - Time.timeAsDouble);
+            if (remaining > 0f)
+            {
+                onCutsceneProgress?.Invoke(1f - Mathf.Clamp01(remaining / warningDuration));
+            }
+            else
+            {
+                onCutsceneFinished?.Invoke();
+                HideWarning();
+                isShrinking = true;
+                shrinkStartedAt = Time.timeAsDouble;
+                shrinkStartScale = playfield.transform.localScale;
+                PlayLog.Write("Field", $"Shrink Move Start (stage={warningStage})");
+            }
         }
 
         if (isShrinking)
@@ -105,6 +119,7 @@ public sealed class FieldManager : Singleton<FieldManager>
         (warningStage, warningRatio) = pendingShrinks.Dequeue();
         warningEndsAt = Time.timeAsDouble + warningDuration;
         UpdateWarningStrips();
+        onCutsceneProgress?.Invoke(0f);
         PlayLog.Write("Field", $"Shrink Warning Start (stage={warningStage})");
     }
 
@@ -158,7 +173,6 @@ public sealed class FieldManager : Singleton<FieldManager>
 
         if (progress < 1f)
         {
-            UpdateWarningStrips();
             return;
         }
 
@@ -172,10 +186,17 @@ public sealed class FieldManager : Singleton<FieldManager>
     /// <summary>현재 경고와 대기 중인 축소 요청을 정리합니다.</summary>
     public void EndShrinkSequence()
     {
+        if (warningStage != 0 && !isShrinking)
+        {
+            onCutsceneFinished?.Invoke();
+        }
+
         isActive = false;
         hasShrunk = false;
         isShrinking = false;
         onBoundsChanged = null;
+        onCutsceneProgress = null;
+        onCutsceneFinished = null;
         warningStage = 0;
         playerMovement = null;
         pendingShrinks.Clear();
@@ -190,8 +211,13 @@ public sealed class FieldManager : Singleton<FieldManager>
             return;
         }
 
-        playfield.transform.localScale = originalScale;
         hasOriginalScale = false;
+        if (playfield == null)
+        {
+            return;
+        }
+
+        playfield.transform.localScale = originalScale;
         PlayLog.Write("Field", "Original Size Restored");
     }
 
@@ -199,7 +225,10 @@ public sealed class FieldManager : Singleton<FieldManager>
     {
         foreach (SpriteRenderer strip in warningStrips)
         {
-            strip.enabled = false;
+            if (strip != null)
+            {
+                strip.enabled = false;
+            }
         }
     }
 

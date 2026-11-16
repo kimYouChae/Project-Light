@@ -7,6 +7,7 @@ public sealed class TestBullet : MonoBehaviour
     [Header("퍼펙트 처리 표시")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private EnemyBulletMovement movement;
+    [SerializeField] private SpriteRenderer timingRing;
     // ##TEMP 퍼펙트 처리된 탄의 구분 색상. 인스펙터에서 조정한다.
     [SerializeField] private Color perfectColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
@@ -19,7 +20,11 @@ public sealed class TestBullet : MonoBehaviour
     private Action<TestBullet> release;
     private bool prepared;
     private PlayerHealth hitTarget;
+    private PlayerLight targetLight;
+    private PlayerPerfectDodge targetPerfectDodge;
     private Vector2 previousTargetPosition;
+    private double segmentStartedAt;
+    private double? lastCoreCrossingAt;
     private BulletRegistry registry;
     private bool perfectProcessed;
     private int damageOverride;
@@ -40,16 +45,58 @@ public sealed class TestBullet : MonoBehaviour
     /// <summary>패턴 발사기가 대여 준비 시 설정하는 이동 컴포넌트.</summary>
     public EnemyBulletMovement Movement => movement;
 
+    public float RemainingLifetime => remainingLifetime;
+
+    public bool CanShowTimingRing(PlayerHealth player)
+    {
+        return timingRing != null && prepared && !ending && isActiveAndEnabled
+            && hitTarget == player && !perfectProcessed && !hitApplied
+            && (movement == null || movement.CanPredictTiming);
+    }
+
+    public Vector2 PredictPosition(float seconds)
+    {
+        return movement != null
+            ? movement.EvaluatePosition(seconds)
+            : (Vector2)transform.position + velocity * seconds;
+    }
+
+    public float GetMaxSpeed(float horizon)
+    {
+        return movement != null ? movement.GetMaxSpeed(horizon) : velocity.magnitude;
+    }
+
+    public void ShowTimingRing(float sizeMultiplier)
+    {
+        timingRing.transform.localScale = Vector3.one * sizeMultiplier;
+        timingRing.enabled = true;
+    }
+
+    public void HideTimingRing()
+    {
+        if (timingRing != null)
+            timingRing.enabled = false;
+    }
+
     /// <summary>활성 탄을 이번 발사에서 한 번만 퍼펙트 처리한다.</summary>
     public bool TryMarkPerfect()
     {
-        if (!prepared || ending || !isActiveAndEnabled || perfectProcessed)
+        if (!prepared || ending || !isActiveAndEnabled || perfectProcessed || hitApplied)
             return false;
 
         perfectProcessed = true;
+        HideTimingRing();
         if (spriteRenderer != null)
             spriteRenderer.color = perfectColor;
         return true;
+    }
+
+    /// <summary>해당 플레이어를 향한 탄의 마지막 코어 진입 시각을 반환합니다.</summary>
+    public bool TryGetLastCoreCrossing(PlayerHealth player, out double crossedAt)
+    {
+        crossedAt = lastCoreCrossingAt.GetValueOrDefault();
+        return hitTarget == player && lastCoreCrossingAt.HasValue
+            && prepared && !ending && isActiveAndEnabled && !perfectProcessed && !hitApplied;
     }
 
     /// <summary>이동·수명·피해·PERFECT 검사를 멈춘다.</summary>
@@ -58,8 +105,11 @@ public sealed class TestBullet : MonoBehaviour
         if (!prepared || ending)
             return;
         ending = true;
+        HideTimingRing();
         absorptionStart = transform.position;
         hitTarget = null;
+        targetLight = null;
+        targetPerfectDodge = null;
         registry?.Unregister(this);
     }
 
@@ -84,6 +134,9 @@ public sealed class TestBullet : MonoBehaviour
             registry.Unregister(this);
         registry = bulletRegistry;
         ending = false;
+        HideTimingRing();
+        if (timingRing != null)
+            timingRing.transform.localScale = Vector3.one;
         perfectProcessed = false;
         this.damageOverride = Mathf.Max(0, damageOverride);
         this.hitOnce = hitOnce;
@@ -110,7 +163,11 @@ public sealed class TestBullet : MonoBehaviour
         SourcePool = sourcePool;
         release = onRelease;
         hitTarget = target;
+        targetLight = target != null ? target.GetComponent<PlayerLight>() : null;
+        targetPerfectDodge = target != null ? target.GetComponent<PlayerPerfectDodge>() : null;
         previousTargetPosition = target != null ? (Vector2)target.transform.position : Vector2.zero;
+        segmentStartedAt = Time.timeAsDouble;
+        lastCoreCrossingAt = null;
         if (movement != null)
             movement.PrepareStraight(position, direction, speed);
         prepared = true;
@@ -124,6 +181,7 @@ public sealed class TestBullet : MonoBehaviour
 
     private void OnDisable()
     {
+        HideTimingRing();
         if (registry != null)
             registry.Unregister(this);
     }
@@ -147,14 +205,17 @@ public sealed class TestBullet : MonoBehaviour
         remainingLifetime -= Time.deltaTime;
         Vector3 position = transform.position;
         // 몸체 접촉은 피해만 검사한다. 퍼펙트·일반 피격으로 탄을 회수하지 않는다.
-        TryHitPlayer(previousPosition, position);
+        double segmentEndedAt = Time.timeAsDouble;
+        TryHitPlayer(previousPosition, position, segmentEndedAt);
+        segmentStartedAt = segmentEndedAt;
         bool outside = position.x < playfieldBounds.min.x - radius || position.x > playfieldBounds.max.x + radius
             || position.y < playfieldBounds.min.y - radius || position.y > playfieldBounds.max.y + radius;
         if (remainingLifetime <= 0f || outside)
             Expire();
     }
 
-    private bool TryHitPlayer(Vector2 previousPosition, Vector2 currentPosition)
+    private bool TryHitPlayer(
+        Vector2 previousPosition, Vector2 currentPosition, double segmentEndedAt)
     {
         // 퍼펙트 처리된 탄은 이번 발사가 끝날 때까지 몸체 피해 판정에서 제외한다.
         if (ending || perfectProcessed || (hitOnce && hitApplied) || hitTarget == null || hitTarget.IsDead)
@@ -177,13 +238,47 @@ public sealed class TestBullet : MonoBehaviour
         float progress = lengthSquared > 0f ? Mathf.Clamp01(-Vector2.Dot(start, segment) / lengthSquared) : 0f;
         Vector2 closest = start + segment * progress;
         float combinedRadius = radius + hitTarget.BodyRadius;
-        if (closest.sqrMagnitude > combinedRadius * combinedRadius)
+        bool hitBody = closest.sqrMagnitude <= combinedRadius * combinedRadius;
+        bool bodyBeforeCore = hitBody && targetLight != null && combinedRadius >= targetLight.CoreRadius;
+        if (!bodyBeforeCore)
+            RecordCoreCrossing(start, segment, lengthSquared, segmentEndedAt);
+
+        if (!hitBody || perfectProcessed)
             return false;
+
         bool damaged = damageOverride > 0
             ? hitTarget.TryTakeHit(damageOverride) : hitTarget.TryTakeHit();
         if (damaged)
             hitApplied = true;
+        else if (bodyBeforeCore)
+            RecordCoreCrossing(start, segment, lengthSquared, segmentEndedAt);
+
         return damaged;
+    }
+
+    private void RecordCoreCrossing(
+        Vector2 start, Vector2 movement, float movementSquared, double segmentEndedAt)
+    {
+        if (hitApplied || registry == null || targetLight == null || targetPerfectDodge == null
+            || movementSquared <= 0f)
+        {
+            return;
+        }
+
+        float coreRadius = targetLight.CoreRadius;
+        float distanceSquared = start.sqrMagnitude - coreRadius * coreRadius;
+        float approach = Vector2.Dot(start, movement);
+        float discriminant = approach * approach - movementSquared * distanceSquared;
+        if (distanceSquared < 0f || approach >= 0f || discriminant <= 0f)
+            return;
+
+        float fraction = distanceSquared / (-approach + Mathf.Sqrt(discriminant));
+        if (fraction > 1f)
+            return;
+
+        double crossedAt = segmentStartedAt + (segmentEndedAt - segmentStartedAt) * fraction;
+        lastCoreCrossingAt = crossedAt;
+        targetPerfectDodge.OnBulletCoreCrossed(this, crossedAt);
     }
 
     /// <summary>발사할 때 등록한 방식으로 한 번만 회수한다.</summary>
@@ -193,6 +288,10 @@ public sealed class TestBullet : MonoBehaviour
             return;
 
         prepared = false;
+        HideTimingRing();
+        targetLight = null;
+        targetPerfectDodge = null;
+        lastCoreCrossingAt = null;
         // Destroy는 프레임 끝에 실행되므로 회수 시점에 목록에서 먼저 제외한다.
         if (registry != null)
             registry.Unregister(this);

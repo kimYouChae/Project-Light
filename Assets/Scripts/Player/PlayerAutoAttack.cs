@@ -72,15 +72,15 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             stageBattle.RegisterBattleEnded(OnBattleEnded);
 
             // 이미 전투 중일 때 활성화돼도 현재 대상을 받는다.
-            targetBoss = stageBattle.IsFighting
+            SetTargetBoss(stageBattle.IsFighting
                 ? stageBattle.CurrentBoss
-                : null;
+                : null);
         }
     }
 
     private void OnBattleStarted(BossHealth boss)
     {
-        targetBoss = boss;
+        SetTargetBoss(boss);
     }
 
     private void OnBattleEnded(BossHealth boss)
@@ -88,8 +88,28 @@ public sealed class PlayerAutoAttack : MonoBehaviour
         if (targetBoss != boss)
             return;
 
-        targetBoss = null;
+        SetTargetBoss(null);
         enhancedShotTimes.Clear();
+    }
+
+    private void SetTargetBoss(BossHealth boss)
+    {
+        if (targetBoss != null)
+            targetBoss.PlayerAttackBlocked -= OnPlayerAttackBlocked;
+
+        targetBoss = boss;
+        if (targetBoss != null)
+            targetBoss.PlayerAttackBlocked += OnPlayerAttackBlocked;
+    }
+
+    private void OnPlayerAttackBlocked(Vector3 headPosition)
+    {
+        enhancedShotTimes.Clear();
+        foreach (PlayerBullet bullet in activeBullets)
+        {
+            if (bullet != null)
+                bullet.RedirectToDashOrigin(targetBoss, headPosition);
+        }
     }
 
     private void ResetAttackCycle()
@@ -126,7 +146,8 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             return;
         }
 
-        if (playerMovement != null && playerMovement.IsHeldByBite)
+        if (playerHealth.IsFieldShrinkCutsceneActive || targetBoss.IsPlayerAttackBlocked
+            || (playerMovement != null && playerMovement.IsHeldByBite))
         {
             return;
         }
@@ -203,7 +224,8 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             returnedBullet,
             attackEvents,
             attackType,
-            sightRadiusMultiplier: stats.BulletSizeMultiplier);
+            sightRadiusMultiplier: stats.BulletSizeMultiplier,
+            sourcePlayer: playerHealth);
 
         activeBullets.Add(bullet);
     }
@@ -218,7 +240,7 @@ public sealed class PlayerAutoAttack : MonoBehaviour
             stageBattle.UnregisterBattleEnded(OnBattleEnded);
         }
 
-        targetBoss = null;
+        SetTargetBoss(null);
         if (frenzy != null)
             frenzy.Ended -= ResetAttackCycle;
         foreach (PlayerBullet bullet in new List<PlayerBullet>(activeBullets))

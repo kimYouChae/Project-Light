@@ -12,6 +12,7 @@ public sealed class PlayerMovement : MonoBehaviour
     [SerializeField] private SpriteRenderer playfield;
 
     private bool isFrozen;
+    private PlayerHealth playerHealth;
 
     /// <summary>이동 경계와 몸체 피격 판정에 사용하는 월드 반경.</summary>
     public float BodyRadius => bodyRadius;
@@ -34,33 +35,49 @@ public sealed class PlayerMovement : MonoBehaviour
         isFrozen = frozen;
     }
 
-    private void Awake() => stats = GetComponent<PlayerStats>();
+    private void Awake()
+    {
+        stats = GetComponent<PlayerStats>();
+        playerHealth = GetComponent<PlayerHealth>();
+    }
 
     private void Update()
     {
-        // 시간 정지, 굳기 또는 물림 중에는 이동 입력을 처리하지 않는다.
-        if (Time.timeScale <= 0f || isFrozen || IsHeldByBite)
+        if (TryGetRequestedVelocity(out Vector2 velocity))
+            Move(velocity, Time.deltaTime);
+    }
+
+    /// <summary>현재 이동 입력의 월드 속도를 반환합니다.</summary>
+    public Vector2 GetRequestedVelocity()
+    {
+        TryGetRequestedVelocity(out Vector2 velocity);
+        return velocity;
+    }
+
+    private bool TryGetRequestedVelocity(out Vector2 velocity)
+    {
+        velocity = Vector2.zero;
+        if (!isActiveAndEnabled || stats == null || Time.timeScale <= 0f || isFrozen || IsHeldByBite
+            || (playerHealth != null && playerHealth.IsFieldShrinkCutsceneActive))
         {
-            return;
+            return false;
         }
 
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null || playfield == null)
-            return;
+            return false;
 
         Vector2 direction = new Vector2(
             (keyboard.dKey.isPressed ? 1f : 0f) - (keyboard.aKey.isPressed ? 1f : 0f),
             (keyboard.wKey.isPressed ? 1f : 0f) - (keyboard.sKey.isPressed ? 1f : 0f));
-        Move(direction, Time.deltaTime);
+        velocity = Vector2.ClampMagnitude(direction, 1f) * stats.MoveSpeed;
+        return true;
     }
 
-    private void Move(Vector2 direction, float deltaTime)
+    private void Move(Vector2 velocity, float deltaTime)
     {
-        if (playfield == null || stats == null)
-            return;
-
         Vector3 position = transform.position;
-        Vector2 offset = Vector2.ClampMagnitude(direction, 1f) * stats.MoveSpeed * Mathf.Max(0f, deltaTime);
+        Vector2 offset = velocity * Mathf.Max(0f, deltaTime);
         position.x += offset.x;
         position.y += offset.y;
 

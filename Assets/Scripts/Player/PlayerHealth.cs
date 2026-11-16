@@ -18,6 +18,13 @@ public sealed class PlayerHealth : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerLight playerLight;
     private float invulnerableUntil;
+    private bool fieldShrinkProtected;
+    public bool IsFieldShrinkCutsceneActive => fieldShrinkProtected;
+
+    public void SetFieldShrinkProtection(bool protectedByCutscene)
+    {
+        fieldShrinkProtected = protectedByCutscene;
+    }
 
     /// <summary>남은 헤일로 체력 칸 수. 0에서도 추가 피격 전까지 살아 있다.</summary>
     public int CurrentHealth => currentHealth;
@@ -80,8 +87,7 @@ public sealed class PlayerHealth : MonoBehaviour
         if (damage <= 0 || !isActiveAndEnabled || isDead || Time.time < invulnerableUntil)
             return false;
 
-        ApplyHit(damage, grantsInvulnerability: true);
-        return true;
+        return ApplyHit(damage, grantsInvulnerability: true);
     }
 
     /// <summary>물림 회차 실패로 헤일로 한 칸을 잃습니다.</summary>
@@ -106,14 +112,17 @@ public sealed class PlayerHealth : MonoBehaviour
         ApplyHit(2, grantsInvulnerability: true);
     }
 
-    private void ApplyHit(int damage, bool grantsInvulnerability)
+    private bool ApplyHit(int damage, bool grantsInvulnerability)
     {
+        if (fieldShrinkProtected)
+            return false;
+
         if (currentHealth == 0)
         {
             isDead = true;
             playerMovement.enabled = false;
             PlayLog.Write("Player", "Hit (fatal, health=0)");
-            return;
+            return true;
         }
 
         currentHealth = Mathf.Max(0, currentHealth - damage);
@@ -124,6 +133,7 @@ public sealed class PlayerHealth : MonoBehaviour
 
         RefreshHealthRatio();
         PlayLog.Write("Player", $"Hit (damage={damage}, health={currentHealth})");
+        return true;
     }
 
     /// <summary>남은 무적을 단축하지 않고 지정 시간만큼 무적을 부여한다.</summary>

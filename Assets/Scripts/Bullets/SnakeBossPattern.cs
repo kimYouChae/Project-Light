@@ -13,6 +13,7 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
     [SerializeField] private BossBulletPattern wavePattern;
     [SerializeField] private SnakeBossSearchlightPattern searchlightPattern;
     [SerializeField] private SnakeBossTailStabPattern tailStabPattern;
+    [SerializeField] private SnakeBossShrinkCutsceneVisual shrinkCutsceneVisual;
 
     // ##TEMP 최종 보스 단독 플레이용 시작값.
     [SerializeField, Min(0f)] private float laneAimDelay = 3.5f;
@@ -53,9 +54,12 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
     private BossHealth bossHealth;
     private FieldManager fieldManager;
     private PlayerMovement playerMovement;
+    private PlayerFrenzy playerFrenzy;
+    private bool isShrinkCutsceneRunning;
     private Vector3 homePosition;
     private float homeTopInset;
     private int fieldShrinkStage;
+    private bool waitingForFieldShrink;
     private TailStabTransition tailStabTransition;
     private BulletRegistry bulletRegistry;
     private AttackSet currentSet;
@@ -94,7 +98,7 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
         bossHealth = GetComponent<BossHealth>();
         bulletRegistry = registry;
         fieldManager = FieldManager.Instance;
-        searchlightPattern.Initialize(player, field, registry, bulletPoolParent, fieldManager);
+        searchlightPattern.Initialize(player, field, fieldManager);
         dashPattern.Initialize(field);
         fanPattern.Initialize(player, field, registry, bulletPoolParent, fieldManager);
         wavePattern.Initialize(player, field, registry, bulletPoolParent);
@@ -120,9 +124,11 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
         if (fieldManager != null)
         {
             playerMovement = player.GetComponent<PlayerMovement>();
+            playerFrenzy = player.GetComponent<PlayerFrenzy>();
             homePosition = transform.position;
             homeTopInset = fieldManager.CurrentBounds.max.y - homePosition.y;
-            fieldManager.BeginShrinkSequence(playerMovement, UpdateHomePosition);
+            fieldManager.BeginShrinkSequence(playerMovement, UpdateHomePosition,
+                AdvanceShrinkCutscene, FinishShrinkCutscene);
         }
         else
         {
@@ -131,6 +137,7 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
         }
 
         fieldShrinkStage = 0;
+        waitingForFieldShrink = false;
         tailStabTransition = TailStabTransition.None;
         setOrder.Remove(AttackSet.TailStab);
         running = true;
@@ -156,11 +163,32 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
             return;
         }
 
-        CheckFieldShrinkThresholds();
+        bool completedShrink = waitingForFieldShrink
+            && fieldManager.AppliedShrinkStage >= fieldShrinkStage;
+        if (completedShrink)
+        {
+            waitingForFieldShrink = false;
+        }
+
+        if (waitingForFieldShrink || TryBeginFieldShrink())
+        {
+            return;
+        }
 
         if (tailStabTransition != TailStabTransition.None)
         {
             AdvanceFirstTailStab();
+            return;
+        }
+
+        if (completedShrink)
+        {
+            if (nextSetIndex == setOrder.Count)
+            {
+                ShuffleSets(avoidRepeat: true);
+            }
+
+            BeginNextSet();
             return;
         }
 
@@ -244,40 +272,74 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
             homePosition, moveImmediately: !dashPattern.IsMovingAway && !isHoldingPlayer);
     }
 
-    private void CheckFieldShrinkThresholds()
+    private void AdvanceShrinkCutscene(float progress)
     {
-        if (fieldManager == null)
+        if (!isShrinkCutsceneRunning)
+        {
+            isShrinkCutsceneRunning = true;
+            player.SetFieldShrinkProtection(true);
+            playerFrenzy?.SetFieldShrinkCountdownPaused(true);
+            shrinkCutsceneVisual?.Begin();
+        }
+
+        shrinkCutsceneVisual?.Show(fieldManager.CurrentBounds, progress);
+    }
+
+    private void FinishShrinkCutscene()
+    {
+        if (!isShrinkCutsceneRunning)
         {
             return;
         }
 
-        while (fieldShrinkStage < 2)
+        isShrinkCutsceneRunning = false;
+        shrinkCutsceneVisual?.Restore();
+        if (player != null)
         {
-            bool isFirstStage = fieldShrinkStage == 0;
-            float threshold = isFirstStage ? 0.5f : 0.25f;
-            if (bossHealth.CurrentHealth > bossHealth.MaxHealth * threshold)
-            {
-                return;
-            }
-
-            float sizeRatio = isFirstStage
-                ? firstFieldSizeRatio
-                : Mathf.Min(secondFieldSizeRatio, firstFieldSizeRatio);
-
-            fieldShrinkStage++;
-            Vector2 targetSize = fieldManager.RequestShrink(fieldShrinkStage, sizeRatio);
-            PlayLog.Write("SnakeBoss",
-                $"Field Shrink Threshold (stage={fieldShrinkStage}, "
-                + $"health={bossHealth.CurrentHealth}/{bossHealth.MaxHealth}, "
-                + $"targetWidth={targetSize.x:F2}, targetHeight={targetSize.y:F2})");
-
-            if (fieldShrinkStage == 2)
-            {
-                tailStabTransition = TailStabTransition.WaitingForShrink;
-                StopCurrentAttacks();
-                PlayLog.Write("SnakeBoss", "First Tail Stab Waiting For Shrink");
-            }
+            player.SetFieldShrinkProtection(false);
         }
+
+        if (playerFrenzy != null)
+        {
+            playerFrenzy.SetFieldShrinkCountdownPaused(false);
+        }
+    }
+
+    private bool TryBeginFieldShrink()
+    {
+        if (fieldManager == null || fieldShrinkStage >= 2)
+        {
+            return false;
+        }
+
+        bool isFirstStage = fieldShrinkStage == 0;
+        float threshold = isFirstStage ? 0.5f : 0.25f;
+        if (bossHealth.CurrentHealth > bossHealth.MaxHealth * threshold)
+        {
+            return false;
+        }
+
+        StopCurrentAttacks();
+        ExpireActiveBullets();
+
+        float sizeRatio = isFirstStage
+            ? firstFieldSizeRatio
+            : Mathf.Min(secondFieldSizeRatio, firstFieldSizeRatio);
+        fieldShrinkStage++;
+        waitingForFieldShrink = true;
+        Vector2 targetSize = fieldManager.RequestShrink(fieldShrinkStage, sizeRatio);
+        PlayLog.Write("SnakeBoss",
+            $"Field Shrink Threshold (stage={fieldShrinkStage}, "
+            + $"health={bossHealth.CurrentHealth}/{bossHealth.MaxHealth}, "
+            + $"targetWidth={targetSize.x:F2}, targetHeight={targetSize.y:F2})");
+
+        if (fieldShrinkStage == 2)
+        {
+            tailStabTransition = TailStabTransition.WaitingForShrink;
+            PlayLog.Write("SnakeBoss", "First Tail Stab Waiting For Shrink");
+        }
+
+        return true;
     }
 
     private void AdvanceFirstTailStab()
@@ -390,8 +452,10 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
         }
 
         running = false;
+        waitingForFieldShrink = false;
         bool bossDefeated = bossHealth != null && bossHealth.IsDefeated;
         fieldManager?.EndShrinkSequence();
+        FinishShrinkCutscene();
         tailStabPattern.StopStab();
         StopCurrentAttacks();
 
@@ -402,6 +466,12 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
             return;
         }
 
+        ExpireActiveBullets();
+        fieldManager?.RestoreOriginalSize();
+    }
+
+    private void ExpireActiveBullets()
+    {
         foreach (TestBullet bullet in new List<TestBullet>(bulletRegistry.ActiveBullets))
         {
             if (bullet != null)
@@ -409,8 +479,6 @@ public sealed class SnakeBossPattern : MonoBehaviour, IBossPattern
                 bullet.Expire();
             }
         }
-
-        fieldManager?.RestoreOriginalSize();
     }
 
     private void OnDisable()

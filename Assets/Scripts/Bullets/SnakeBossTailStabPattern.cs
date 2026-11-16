@@ -13,6 +13,7 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
 
     // ##TEMP 첫 꼬리 꽂기의 슬로모션 및 판정선 설정.
     [SerializeField, Min(0f)] private float slowLeadDistance = 2f;
+    [SerializeField, Min(0f)] private float slowFullSpeedOffset = 0.5f;
     [SerializeField, Range(0.01f, 1f)] private float slowTimeScale = 0.25f;
     [SerializeField] private Color approachingColor = new Color(1f, 0.3f, 0.2f);
     [SerializeField] private Color readyColor = new Color(1f, 0.9f, 0.35f);
@@ -25,6 +26,7 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
     private SpriteRenderer activeTail;
     private Transform target;
     private PlayerHealth targetHealth;
+    private PlayerMovement targetMovement;
     private PlayerLight playerLight;
     private PlayerPerfectDodge perfectDodge;
     private bool isSlowing;
@@ -35,6 +37,8 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
     private float activeSlowTimeScale;
     private double slowStartedAt;
     private float tipY;
+    private float previousPlayerY;
+    private double? lastContactAt;
 
     /// <summary>꼬리가 내려오는 중인지 반환합니다.</summary>
     public bool IsRunning => activeTail != null;
@@ -67,6 +71,9 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
         activeSlowLeadDistance = isFirstStab ? slowLeadDistance : repeatSlowLeadDistance;
         activeSlowTimeScale = isFirstStab ? slowTimeScale : repeatSlowTimeScale;
         target = player.transform;
+        targetMovement = player.GetComponent<PlayerMovement>();
+        previousPlayerY = target.position.y;
+        lastContactAt = null;
         tipY = fieldBounds.max.y;
 
         Camera camera = Camera.main;
@@ -86,7 +93,7 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
             SetTailPose(tail);
         });
 
-        perfectDodge.RegisterTailStabPerfect(TryPerfect);
+        perfectDodge.RegisterTailStabPerfect(GetTailStabSecondsToContact, CompleteTailStabPerfect);
         PlayLog.Write("SnakeBoss", isFirstStab ? "First Tail Stab Start" : "Tail Stab Start");
     }
 
@@ -102,7 +109,7 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
         float playerY = target.position.y;
         float nextTipY = tipY - descentSpeed * deltaTime;
         float perfectOuterDistance =
-            playerLight.CoreRadius + perfectDodge.PerfectTolerance;
+            playerLight.CoreRadius + slowFullSpeedOffset;
         float slowStartY = playerY + perfectOuterDistance + activeSlowLeadDistance;
 
         if (!isSlowing && nextTipY <= slowStartY)
@@ -120,6 +127,16 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
                 $"Tail Stab Slow Start (targetScale={previousTimeScale * activeSlowTimeScale:F2})");
         }
 
+        float previousGap = tipY - previousPlayerY;
+        float currentGap = nextTipY - playerY;
+        float coreRadius = playerLight.CoreRadius;
+        if (previousGap >= coreRadius && currentGap < coreRadius)
+        {
+            double fraction = (previousGap - coreRadius) / (previousGap - currentGap);
+            lastContactAt = Time.timeAsDouble - deltaTime * (1d - fraction);
+        }
+
+        previousPlayerY = playerY;
         tipY = nextTipY;
         SetTailPose(activeTail);
 
@@ -149,29 +166,56 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
         }
     }
 
-    private bool CanPerfect()
+    private double GetTailStabSecondsToContact()
     {
-        if (!IsRunning || !isSlowing || targetHealth == null || targetHealth.IsDead)
+        if (!IsRunning || targetHealth == null || targetHealth.IsDead
+            || tipY <= target.position.y)
         {
-            return false;
+            return double.NaN;
         }
 
-        Vector2 tipPosition = activeTail.transform.position
-            - Vector3.up * (tailSize.y * 0.5f);
-        return playerLight.IsOnCoreBoundary(
-            tipPosition, 0f, perfectDodge.PerfectTolerance);
+        double now = Time.timeAsDouble;
+        float grace = perfectDodge.PerfectGraceSeconds;
+        if (lastContactAt.HasValue && now - lastContactAt.Value <= grace)
+        {
+            return lastContactAt.Value - now;
+        }
+
+        double predicted = PredictTailContactSeconds(grace);
+        return double.IsNaN(predicted) && lastContactAt.HasValue
+            ? lastContactAt.Value - now : predicted;
     }
 
-    private bool TryPerfect()
+    private double PredictTailContactSeconds(float horizon)
     {
-        if (!CanPerfect())
+        Vector3 playerPosition = target.position;
+        float gap = tipY - playerPosition.y - playerLight.CoreRadius;
+        float playerVelocityY = targetMovement != null
+            ? targetMovement.GetRequestedVelocity().y : 0f;
+        float movingTime = horizon;
+        if (playerVelocityY != 0f)
         {
-            return false;
+            Vector3 predicted = playerPosition + Vector3.up * (playerVelocityY * horizon);
+            float clampedY = targetMovement.ClampToPlayfield(predicted).y;
+            movingTime = Mathf.Clamp((clampedY - playerPosition.y) / playerVelocityY, 0f, horizon);
         }
 
+        float closingSpeed = descentSpeed + (movingTime > 0f ? playerVelocityY : 0f);
+        if (gap >= 0f && closingSpeed > 0f && gap <= closingSpeed * movingTime)
+        {
+            return gap / closingSpeed;
+        }
+
+        float gapAtBoundary = gap - closingSpeed * movingTime;
+        float remainingTime = gapAtBoundary / descentSpeed;
+        return gapAtBoundary >= 0f && remainingTime <= horizon - movingTime
+            ? movingTime + remainingTime : double.NaN;
+    }
+
+    private void CompleteTailStabPerfect()
+    {
         PlayLog.Write("SnakeBoss", "Tail Stab Perfect Success");
         StopStab();
-        return true;
     }
 
     private void LateUpdate()
@@ -194,7 +238,8 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
 
         Vector3 center = playerLight.transform.position;
         float radius = playerLight.CoreRadius;
-        Color color = CanPerfect() ? readyColor : approachingColor;
+        Color color = perfectDodge.IsWithinPerfectWindow(GetTailStabSecondsToContact())
+            ? readyColor : approachingColor;
         perfectRing.startColor = perfectRing.endColor = color;
 
         for (int index = 0; index < perfectRing.positionCount; index++)
@@ -219,7 +264,7 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
     {
         if (perfectDodge != null)
         {
-            perfectDodge.UnregisterTailStabPerfect(TryPerfect);
+            perfectDodge.UnregisterTailStabPerfect(GetTailStabSecondsToContact);
         }
 
         if (perfectRing != null)
@@ -251,6 +296,8 @@ public sealed class SnakeBossTailStabPattern : MonoBehaviour
 
         target = null;
         targetHealth = null;
+        targetMovement = null;
+        lastContactAt = null;
         playerLight = null;
         perfectDodge = null;
     }

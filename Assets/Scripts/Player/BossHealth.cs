@@ -15,6 +15,22 @@ public sealed class BossHealth : MonoBehaviour
     public float HitRadius => hitRadius;
     /// <summary>체력이 소진되었는지 여부.</summary>
     public bool IsDefeated => currentHealth <= 0;
+    public bool IsPlayerAttackBlocked { get; private set; }
+    public event System.Action<Vector3> PlayerAttackBlocked;
+
+    public void BeginPlayerAttackBlock(Vector3 headPosition)
+    {
+        if (IsPlayerAttackBlocked)
+            return;
+
+        IsPlayerAttackBlocked = true;
+        PlayerAttackBlocked?.Invoke(headPosition);
+    }
+
+    public void EndPlayerAttackBlock()
+    {
+        IsPlayerAttackBlocked = false;
+    }
 
     /// <summary>체력이 소진됐을 때 한 번 발생한다.</summary>
     public event System.Action Defeated;
@@ -27,6 +43,9 @@ public sealed class BossHealth : MonoBehaviour
     /// <summary>직접 공격 피해를 적용하고 적중 위치를 알린다.</summary>
     public bool TryTakePlayerAttackDamage(int damage)
     {
+        if (IsPlayerAttackBlocked)
+            return false;
+
         Vector3 hitPosition = transform.position;
         if (!TryTakeDamage(damage))
             return false;
