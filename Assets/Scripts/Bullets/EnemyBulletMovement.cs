@@ -87,9 +87,6 @@ public sealed class EnemyBulletMovement : MonoBehaviour
         return position;
     }
 
-    public bool CanPredictTiming => motionType != MotionType.Homing;
-    public bool IsStraight => motionType == MotionType.Straight;
-
     /// <summary>현재 이동 상태에서 지정 게임 시간 뒤의 위치를 읽습니다.</summary>
     public Vector2 EvaluatePosition(float seconds)
     {
@@ -108,14 +105,4 @@ public sealed class EnemyBulletMovement : MonoBehaviour
         return position + direction * distance;
     }
 
-    public float GetMaxSpeed(float horizon)
-    {
-        if (motionType == MotionType.Wave)
-        {
-            float lateralSpeed = amplitude * Mathf.PI * 2f / period;
-            return Mathf.Sqrt(speed * speed + lateralSpeed * lateralSpeed);
-        }
-
-        return speed + acceleration * horizon;
-    }
 }

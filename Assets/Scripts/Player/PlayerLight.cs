@@ -13,14 +13,10 @@ public sealed class PlayerLight : MonoBehaviour
     [SerializeField, Min(0.01f)] private float coreRadius = 0.8f;
 
     [Header("===표시 참조===")]
-    [SerializeField] private LineRenderer coreLine;
     [SerializeField] private Light2D haloLight;
 
     [Header("===표시 설정===")]
     // ##TEMP 선의 굵기, 분할 수, 색상과 빛의 강도·감쇠 설정.
-    [SerializeField, Min(0.001f)] private float lineWidth = 0.035f;     // 선 두께
-    [SerializeField, Range(16, 256)] private int segmentCount = 96;     // 코어 근처 원 그릴 때 쓰는 점 갯수 
-    [SerializeField] private Color coreColor = new Color(1f, 0.87f, 0.45f, 1f); // 코어 색
     [SerializeField] private Color haloColor = new Color(1f, 0.83f, 0.46f, 1f); // 근처 빛 색 
     [SerializeField, Min(0f)] private float haloIntensity = 1.5f;       // 빛 밝기
     [SerializeField, Range(0f, 1f)] private float innerRadiusRatio = 0.4f;  // 밝게 유지되는 안쪽 영역 
@@ -65,23 +61,6 @@ public sealed class PlayerLight : MonoBehaviour
         searchlightFlashRemaining = Mathf.Max(0f, searchlightFlashRemaining - Time.deltaTime);
         if (stats == null)
             stats = GetComponent<PlayerStats>();
-        // 표시는 판정용 반경으로 만들고 Light2D 값은 판정에 사용하지 않는다.
-        if (coreLine != null)
-        {
-            coreLine.useWorldSpace = true;
-            coreLine.loop = true;
-            coreLine.positionCount = segmentCount;
-            coreLine.widthMultiplier = lineWidth;
-            coreLine.startColor = coreColor;
-            coreLine.endColor = coreColor;
-            Vector3 center = transform.position;
-            for (int i = 0; i < segmentCount; i++)
-            {
-                float angle = i * Mathf.PI * 2f / segmentCount;
-                coreLine.SetPosition(i, center + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle), 0f) * coreRadius);
-            }
-        }
-
         UpdateHalo();
     }
 
@@ -104,8 +83,6 @@ public sealed class PlayerLight : MonoBehaviour
     private void OnValidate()
     {
         coreRadius = Mathf.Max(0.01f, coreRadius);
-        lineWidth = Mathf.Max(0.001f, lineWidth);
-        segmentCount = Mathf.Clamp(segmentCount, 16, 256);
         haloIntensity = Mathf.Max(0f, haloIntensity);
         innerRadiusRatio = Mathf.Clamp01(innerRadiusRatio);
     }

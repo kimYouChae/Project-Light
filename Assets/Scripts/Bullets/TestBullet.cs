@@ -7,7 +7,7 @@ public sealed class TestBullet : MonoBehaviour
     [Header("퍼펙트 처리 표시")]
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private EnemyBulletMovement movement;
-    [SerializeField] private SpriteRenderer timingRing;
+    [SerializeField] private bool reactsToCoreProximity;
     // ##TEMP 퍼펙트 처리된 탄의 구분 색상. 인스펙터에서 조정한다.
     [SerializeField] private Color perfectColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
@@ -22,9 +22,13 @@ public sealed class TestBullet : MonoBehaviour
     private PlayerHealth hitTarget;
     private PlayerLight targetLight;
     private PlayerPerfectDodge targetPerfectDodge;
+    private PlayerCoreBoundaryView targetCoreBoundaryView;
     private Vector2 previousTargetPosition;
     private double segmentStartedAt;
     private double? lastCoreCrossingAt;
+
+    public float CoreClosingSpeed { get; private set; }
+    public Vector2 LastCoreContactDirection { get; private set; }
     private BulletRegistry registry;
     private bool perfectProcessed;
     private int damageOverride;
@@ -45,13 +49,11 @@ public sealed class TestBullet : MonoBehaviour
     /// <summary>패턴 발사기가 대여 준비 시 설정하는 이동 컴포넌트.</summary>
     public EnemyBulletMovement Movement => movement;
 
-    public float RemainingLifetime => remainingLifetime;
-
-    public bool CanShowTimingRing(PlayerHealth player)
+    /// <summary>이 발사가 지정한 플레이어의 코어 근접 반응 대상인지 반환합니다.</summary>
+    public bool CanReactToCoreProximity(PlayerHealth player)
     {
-        return timingRing != null && prepared && !ending && isActiveAndEnabled
-            && hitTarget == player && !perfectProcessed && !hitApplied
-            && (movement == null || movement.CanPredictTiming);
+        return reactsToCoreProximity && prepared && !ending && isActiveAndEnabled
+            && hitTarget == player && !perfectProcessed && !hitApplied;
     }
 
     public Vector2 PredictPosition(float seconds)
@@ -61,23 +63,6 @@ public sealed class TestBullet : MonoBehaviour
             : (Vector2)transform.position + velocity * seconds;
     }
 
-    public float GetMaxSpeed(float horizon)
-    {
-        return movement != null ? movement.GetMaxSpeed(horizon) : velocity.magnitude;
-    }
-
-    public void ShowTimingRing(float sizeMultiplier)
-    {
-        timingRing.transform.localScale = Vector3.one * sizeMultiplier;
-        timingRing.enabled = true;
-    }
-
-    public void HideTimingRing()
-    {
-        if (timingRing != null)
-            timingRing.enabled = false;
-    }
-
     /// <summary>활성 탄을 이번 발사에서 한 번만 퍼펙트 처리한다.</summary>
     public bool TryMarkPerfect()
     {
@@ -85,7 +70,6 @@ public sealed class TestBullet : MonoBehaviour
             return false;
 
         perfectProcessed = true;
-        HideTimingRing();
         if (spriteRenderer != null)
             spriteRenderer.color = perfectColor;
         return true;
@@ -105,11 +89,11 @@ public sealed class TestBullet : MonoBehaviour
         if (!prepared || ending)
             return;
         ending = true;
-        HideTimingRing();
         absorptionStart = transform.position;
         hitTarget = null;
         targetLight = null;
         targetPerfectDodge = null;
+        targetCoreBoundaryView = null;
         registry?.Unregister(this);
     }
 
@@ -134,10 +118,6 @@ public sealed class TestBullet : MonoBehaviour
             registry.Unregister(this);
         registry = bulletRegistry;
         ending = false;
-        HideTimingRing();
-        if (timingRing != null)
-            timingRing.transform.localScale = Vector3.one;
-        perfectProcessed = false;
         this.damageOverride = Mathf.Max(0, damageOverride);
         this.hitOnce = hitOnce;
         hitApplied = false;
@@ -165,9 +145,13 @@ public sealed class TestBullet : MonoBehaviour
         hitTarget = target;
         targetLight = target != null ? target.GetComponent<PlayerLight>() : null;
         targetPerfectDodge = target != null ? target.GetComponent<PlayerPerfectDodge>() : null;
+        targetCoreBoundaryView = reactsToCoreProximity && target != null
+            ? target.GetComponent<PlayerCoreBoundaryView>() : null;
         previousTargetPosition = target != null ? (Vector2)target.transform.position : Vector2.zero;
         segmentStartedAt = Time.timeAsDouble;
         lastCoreCrossingAt = null;
+        CoreClosingSpeed = 0f;
+        LastCoreContactDirection = Vector2.zero;
         if (movement != null)
             movement.PrepareStraight(position, direction, speed);
         prepared = true;
@@ -181,7 +165,6 @@ public sealed class TestBullet : MonoBehaviour
 
     private void OnDisable()
     {
-        HideTimingRing();
         if (registry != null)
             registry.Unregister(this);
     }
@@ -201,7 +184,10 @@ public sealed class TestBullet : MonoBehaviour
         if (movement != null)
             transform.position = movement.Move(Time.deltaTime);
         else
-            transform.position += (Vector3)(velocity * Time.deltaTime);
+        {
+            Vector2 next = PredictPosition(Time.deltaTime);
+            transform.position = new Vector3(next.x, next.y, transform.position.z);
+        }
         remainingLifetime -= Time.deltaTime;
         Vector3 position = transform.position;
         // 몸체 접촉은 피해만 검사한다. 퍼펙트·일반 피격으로 탄을 회수하지 않는다.
@@ -224,6 +210,7 @@ public sealed class TestBullet : MonoBehaviour
         Vector2 targetPosition = hitTarget.transform.position;
         if (hitTarget.IsHeldByBite)
         {
+            CoreClosingSpeed = 0f;
             // 물림 중 위치를 갱신해 해제 후 이전 위치부터 다시 검사하지 않는다.
             previousTargetPosition = targetPosition;
             return false;
@@ -232,6 +219,13 @@ public sealed class TestBullet : MonoBehaviour
         // 상대 이동 선분으로 검사해 한 프레임 사이에 몸체를 가로지르는 탄도 잡는다.
         Vector2 start = previousPosition - previousTargetPosition;
         Vector2 end = currentPosition - targetPosition;
+        if (reactsToCoreProximity)
+        {
+            double interval = segmentEndedAt - segmentStartedAt;
+            CoreClosingSpeed = interval > 0d
+                ? (float)((start.magnitude - end.magnitude) / interval) : 0f;
+        }
+
         previousTargetPosition = targetPosition;
         Vector2 segment = end - start;
         float lengthSquared = segment.sqrMagnitude;
@@ -278,6 +272,13 @@ public sealed class TestBullet : MonoBehaviour
 
         double crossedAt = segmentStartedAt + (segmentEndedAt - segmentStartedAt) * fraction;
         lastCoreCrossingAt = crossedAt;
+        if (reactsToCoreProximity)
+        {
+            LastCoreContactDirection = (start + movement * fraction).normalized;
+            if (targetCoreBoundaryView != null)
+                targetCoreBoundaryView.NotifyBulletContact(LastCoreContactDirection);
+        }
+
         targetPerfectDodge.OnBulletCoreCrossed(this, crossedAt);
     }
 
@@ -288,9 +289,9 @@ public sealed class TestBullet : MonoBehaviour
             return;
 
         prepared = false;
-        HideTimingRing();
         targetLight = null;
         targetPerfectDodge = null;
+        targetCoreBoundaryView = null;
         lastCoreCrossingAt = null;
         // Destroy는 프레임 끝에 실행되므로 회수 시점에 목록에서 먼저 제외한다.
         if (registry != null)
