@@ -236,7 +236,7 @@ public sealed class HeadBossBitePattern : MonoBehaviour
         if (throwElapsed >= throwDuration)
         {
             heldPlayer.transform.position = throwEnd;
-            heldPlayer.GrantInvulnerability(landingInvulnerability);
+            heldPlayer.GrantInvulnerability(landingInvulnerability, isPerfect: false);
             PlayLog.Write("HeadBoss", $"Bite Landing (invulnerability={landingInvulnerability:F3}s)");
             isThrowing = false;
 

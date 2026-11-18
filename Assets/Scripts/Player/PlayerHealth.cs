@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(PlayerMovement), typeof(PlayerLight))]
@@ -18,8 +18,43 @@ public sealed class PlayerHealth : MonoBehaviour
     private PlayerMovement playerMovement;
     private PlayerLight playerLight;
     private float invulnerableUntil;
+    private float blinkInvulnerableUntil;
+    private float perfectInvulnerableUntil;
     private bool fieldShrinkProtected;
     public bool IsFieldShrinkCutsceneActive => fieldShrinkProtected;
+
+    private System.Action healthChanged;
+    private System.Action<int> hit;
+
+    /// <summary>피격 또는 착지 무적의 표시 종료 시각입니다.</summary>
+    public float BlinkInvulnerableUntil => blinkInvulnerableUntil;
+
+    /// <summary>퍼펙트 무적의 표시 종료 시각입니다.</summary>
+    public float PerfectInvulnerableUntil => perfectInvulnerableUntil;
+
+    /// <summary>체력 변경 알림을 등록합니다.</summary>
+    public void RegisterHealthChanged(System.Action callback)
+    {
+        healthChanged += callback;
+    }
+
+    /// <summary>체력 변경 알림을 해제합니다.</summary>
+    public void UnregisterHealthChanged(System.Action callback)
+    {
+        healthChanged -= callback;
+    }
+
+    /// <summary>피격 알림을 등록합니다. 인자는 실제 감소한 체력입니다.</summary>
+    public void RegisterHit(System.Action<int> callback)
+    {
+        hit += callback;
+    }
+
+    /// <summary>피격 알림을 해제합니다.</summary>
+    public void UnregisterHit(System.Action<int> callback)
+    {
+        hit -= callback;
+    }
 
     public void SetFieldShrinkProtection(bool protectedByCutscene)
     {
@@ -49,6 +84,8 @@ public sealed class PlayerHealth : MonoBehaviour
         currentHealth = stats.MaxHealth;
         isDead = false;
         invulnerableUntil = float.NegativeInfinity;
+        blinkInvulnerableUntil = float.NegativeInfinity;
+        perfectInvulnerableUntil = float.NegativeInfinity;
         playerLight.SetHealthRatio(1f);
     }
 
@@ -73,6 +110,7 @@ public sealed class PlayerHealth : MonoBehaviour
     {
         currentHealth = Mathf.Min(currentHealth, stats.MaxHealth);
         playerLight.SetHealthRatio((float)currentHealth / stats.MaxHealth);
+        healthChanged?.Invoke();
     }
 
     /// <summary>실제 피격을 적용하면 true, 무적·사망·비활성 상태면 false를 반환한다.</summary>
@@ -122,25 +160,37 @@ public sealed class PlayerHealth : MonoBehaviour
             isDead = true;
             playerMovement.enabled = false;
             PlayLog.Write("Player", "Hit (fatal, health=0)");
+            hit?.Invoke(0);
             return true;
         }
 
+        int previousHealth = currentHealth;
         currentHealth = Mathf.Max(0, currentHealth - damage);
         if (grantsInvulnerability)
         {
             invulnerableUntil = Time.time + hitInvulnerabilityDuration;
+            blinkInvulnerableUntil = invulnerableUntil;
+            perfectInvulnerableUntil = Mathf.Min(perfectInvulnerableUntil, invulnerableUntil);
         }
 
         RefreshHealthRatio();
         PlayLog.Write("Player", $"Hit (damage={damage}, health={currentHealth})");
+        hit?.Invoke(previousHealth - currentHealth);
         return true;
     }
 
     /// <summary>남은 무적을 단축하지 않고 지정 시간만큼 무적을 부여한다.</summary>
-    public void GrantInvulnerability(float duration)
+    public void GrantInvulnerability(float duration, bool isPerfect)
     {
         if (!isDead)
+        {
             invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + Mathf.Max(0f, duration));
+            float until = Time.time + Mathf.Max(0f, duration);
+            if (isPerfect)
+                perfectInvulnerableUntil = Mathf.Max(perfectInvulnerableUntil, until);
+            else
+                blinkInvulnerableUntil = Mathf.Max(blinkInvulnerableUntil, until);
+        }
     }
 
     /// <summary>살아 있는 플레이어의 체력을 최대치까지 회복한다.</summary>

@@ -10,6 +10,8 @@ public sealed class TestBullet : MonoBehaviour
     [SerializeField] private bool reactsToCoreProximity;
     // ##TEMP 퍼펙트 처리된 탄의 구분 색상. 인스펙터에서 조정한다.
     [SerializeField] private Color perfectColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+    // ##TEMP 수풀 통과 확인용 색입니다. 게임 효과가 아니며 Inspector에서 조절합니다.
+    [SerializeField] private Color bushPassedColor = new Color(0.2f, 0.5f, 1f, 1f);
 
     private Color originalColor;
     private bool originalColorCached;
@@ -36,6 +38,12 @@ public sealed class TestBullet : MonoBehaviour
     private bool hitApplied;
     private bool ending;
     private Vector3 absorptionStart;
+    private int bushPreparedFrame;
+    // 헤일로 경고 접근 검사는 코어 판정용 이전 위치와 별도로 관리합니다.
+    private bool approachingForBushWarning;
+
+    /// <summary>이번 발사에서 탄 반경이 수풀 영역에 닿았는지 반환합니다.</summary>
+    public bool HasPassedBush { get; private set; }
 
     /// <summary>발사 당시의 풀. null이면 Instantiate/Destroy 모드다.</summary>
     public ComponentPool<TestBullet> SourcePool { get; private set; }
@@ -48,6 +56,14 @@ public sealed class TestBullet : MonoBehaviour
 
     /// <summary>패턴 발사기가 대여 준비 시 설정하는 이동 컴포넌트.</summary>
     public EnemyBulletMovement Movement => movement;
+
+    /// <summary>지정한 플레이어에게 가까워지는 수풀 통과 탄인지 반환합니다.</summary>
+    public bool CanShowBushWarning(PlayerHealth player)
+    {
+        return player != null && hitTarget == player && !player.IsDead
+            && prepared && !ending && isActiveAndEnabled
+            && HasPassedBush && approachingForBushWarning;
+    }
 
     /// <summary>이 발사가 지정한 플레이어의 코어 근접 반응 대상인지 반환합니다.</summary>
     public bool CanReactToCoreProximity(PlayerHealth player)
@@ -154,6 +170,11 @@ public sealed class TestBullet : MonoBehaviour
         LastCoreContactDirection = Vector2.zero;
         if (movement != null)
             movement.PrepareStraight(position, direction, speed);
+        HasPassedBush = false;
+        bushPreparedFrame = Time.frameCount;
+        approachingForBushWarning = false;
+        if (BushArea.OverlapsAny(position, radius))
+            MarkBushPassed();
         prepared = true;
     }
 
@@ -190,6 +211,9 @@ public sealed class TestBullet : MonoBehaviour
         }
         remainingLifetime -= Time.deltaTime;
         Vector3 position = transform.position;
+        RecordBushWarningApproach(previousPosition, position);
+        RecordBushPassage(
+            previousPosition, position, bushPreparedFrame != Time.frameCount);
         // 몸체 접촉은 피해만 검사한다. 퍼펙트·일반 피격으로 탄을 회수하지 않는다.
         double segmentEndedAt = Time.timeAsDouble;
         TryHitPlayer(previousPosition, position, segmentEndedAt);
@@ -198,6 +222,43 @@ public sealed class TestBullet : MonoBehaviour
             || position.y < playfieldBounds.min.y - radius || position.y > playfieldBounds.max.y + radius;
         if (remainingLifetime <= 0f || outside)
             Expire();
+    }
+
+    private void RecordBushWarningApproach(
+        Vector2 previousPosition, Vector2 currentPosition)
+    {
+        if (hitTarget == null)
+        {
+            approachingForBushWarning = false;
+            return;
+        }
+
+        // 플레이어 이동은 제외하고 이번 프레임 탄 자체의 진행 방향으로 판단합니다.
+        Vector2 delta = currentPosition - previousPosition;
+        Vector2 toPlayer = (Vector2)hitTarget.transform.position - currentPosition;
+        approachingForBushWarning =
+            delta.sqrMagnitude > 0f && Vector2.Dot(delta, toPlayer) > 0f;
+    }
+
+    private void RecordBushPassage(
+        Vector2 previousPosition, Vector2 currentPosition, bool includeScroll)
+    {
+        if (HasPassedBush)
+            return;
+
+        if (!BushArea.CrossesAny(
+            previousPosition, currentPosition, radius, includeScroll))
+            return;
+
+        MarkBushPassed();
+    }
+
+    private void MarkBushPassed()
+    {
+        HasPassedBush = true;
+        // ##TEMP 기존 퍼펙트 회색 표시가 통과 확인용 색에 덮이지 않게 합니다.
+        if (!perfectProcessed && spriteRenderer != null)
+            spriteRenderer.color = bushPassedColor;
     }
 
     private bool TryHitPlayer(

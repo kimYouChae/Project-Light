@@ -204,7 +204,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
             if (success)
             {
                 completeSearchlightPerfect();
-                playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
+                playerHealth.GrantInvulnerability(stats.PerfectInvulnerability, isPerfect: true);
             }
             else
             {
@@ -274,7 +274,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
         if (pendingSuccessCount > 0)
         {
-            playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
+            playerHealth.GrantInvulnerability(stats.PerfectInvulnerability, isPerfect: true);
         }
 
         foreach (TestBullet bullet in bulletRegistry.ActiveBullets)
@@ -298,7 +298,7 @@ public sealed class PlayerPerfectDodge : MonoBehaviour
 
         if (pendingSuccessCount++ == 0)
         {
-            playerHealth.GrantInvulnerability(stats.PerfectInvulnerability);
+            playerHealth.GrantInvulnerability(stats.PerfectInvulnerability, isPerfect: true);
         }
 
         LogTimedPerfectInput("Bullet", secondsToContact, true);
